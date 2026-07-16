@@ -50,7 +50,7 @@ export default function EffectListing({
   }, [selectedCategoryId, filterRecentOnly, searchQuery]);
 
   return (
-    <div id="effect-listing-section" className="w-full flex flex-col gap-6 py-6">
+    <div id="effect-listing-section" className="w-full flex flex-col gap-6">
       
       {/* Search and filter action row */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full">

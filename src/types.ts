@@ -15,6 +15,8 @@ export interface EffectItem {
   views: number;
   downloads: number;
   videoPreviewUrl?: string;
+  beforeImage?: string;
+  afterImage?: string;
   parameters?: Parameter[];
   requirements?: string[];
 }

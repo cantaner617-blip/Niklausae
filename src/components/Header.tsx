@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Moon, Sun, Users } from 'lucide-react';
+import { Moon, Sun, Users, Settings } from 'lucide-react';
 
 interface HeaderProps {
   darkMode: boolean;
   setDarkMode: (dark: boolean) => void;
   activeStatusText: string;
+  onOpenAdmin: () => void;
 }
 
-export default function Header({ darkMode, setDarkMode, activeStatusText }: HeaderProps) {
+export default function Header({ darkMode, setDarkMode, activeStatusText, onOpenAdmin }: HeaderProps) {
   const [visitCount, setVisitCount] = useState<number>(1474);
 
   useEffect(() => {
@@ -51,7 +52,7 @@ export default function Header({ darkMode, setDarkMode, activeStatusText }: Head
           style={{ boxShadow: darkMode ? '0 4px 20px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,0,0,0.05)' }}
         >
           <div className="flex flex-col items-start leading-none">
-            <span className="text-[9px] tracking-wider text-neutral-500 font-bold uppercase">GÖRÜNÜM</span>
+            <span className="text-[9px] tracking-wider text-neutral-500 font-bold uppercase font-mono">GÖRÜNÜM</span>
             <span className="text-xs font-black tracking-wide mt-1">
               {darkMode ? 'GECE' : 'GÜNDÜZ'}
             </span>
@@ -70,6 +71,21 @@ export default function Header({ darkMode, setDarkMode, activeStatusText }: Head
               )}
             </div>
           </div>
+        </button>
+
+        {/* Secret Control Key Switch */}
+        <button
+          id="admin-panel-btn"
+          onClick={onOpenAdmin}
+          className={`p-2.5 rounded-2xl border transition-all duration-300 cursor-pointer ${
+            darkMode
+              ? 'bg-[#121214] border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-700'
+              : 'bg-white border-neutral-200 text-neutral-500 hover:text-neutral-850 hover:border-neutral-350'
+          }`}
+          style={{ boxShadow: darkMode ? '0 4px 20px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,0,0,0.05)' }}
+          title="Yönetici Paneli"
+        >
+          <Settings className="w-5 h-5" />
         </button>
 
         {/* Visitor Counter */}

@@ -7,9 +7,11 @@ import RequiredPluginsModal from './components/RequiredPluginsModal';
 import EffectDetailModal from './components/EffectDetailModal';
 import CreatorProfile from './components/CreatorProfile';
 import FeedbackForm from './components/FeedbackForm';
-import { CATEGORIES } from './data';
-import { EffectItem } from './types';
-import { MessageSquare, ExternalLink } from 'lucide-react';
+import CategoryDetail from './components/CategoryDetail';
+import AdminPanel from './components/AdminPanel';
+import { CATEGORIES, EFFECT_ITEMS } from './data';
+import { EffectItem, Category } from './types';
+import { MessageSquare, ExternalLink, Megaphone } from 'lucide-react';
 
 export default function App() {
   const [darkMode, setDarkMode] = useState<boolean>(true);
@@ -17,6 +19,109 @@ export default function App() {
   const [filterRecentOnly, setFilterRecentOnly] = useState<boolean>(false);
   const [isPluginsModalOpen, setIsPluginsModalOpen] = useState<boolean>(false);
   const [selectedEffect, setSelectedEffect] = useState<EffectItem | null>(null);
+
+  // Admin Panel Visibility
+  const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
+
+  // Site configuration states
+  const [siteTitle, setSiteTitle] = useState<string>(() => {
+    return localStorage.getItem('pars_mazi_site_title') || 'PARS MAZI';
+  });
+  const [siteSubtitle, setSiteSubtitle] = useState<string>(() => {
+    return localStorage.getItem('pars_mazi_site_subtitle') || 'EDIT PACK';
+  });
+  const [siteBadge, setSiteBadge] = useState<string>(() => {
+    return localStorage.getItem('pars_mazi_site_badge') || 'AFTER EFFECTS PACKS';
+  });
+  const [activeStatusTextState, setActiveStatusTextState] = useState<string>(() => {
+    return localStorage.getItem('pars_mazi_active_status') || '2,845 AKTİF EDİTÖR ÇEVRİMİÇİ';
+  });
+  const [discordUrl, setDiscordUrl] = useState<string>(() => {
+    return localStorage.getItem('pars_mazi_discord_url') || 'https://discord.gg';
+  });
+
+  // Dynamic Categories and Effects Lists loaded from LocalStorage
+  const [categories, setCategories] = useState<Category[]>(() => {
+    const saved = localStorage.getItem('pars_mazi_categories');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return CATEGORIES;
+  });
+
+  const [effects, setEffects] = useState<EffectItem[]>(() => {
+    const saved = localStorage.getItem('pars_mazi_effects');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return EFFECT_ITEMS;
+  });
+
+  // Dynamic active announcement
+  const [activeAnnouncement, setActiveAnnouncement] = useState<string | null>(null);
+
+  useEffect(() => {
+    const updateAnnouncement = () => {
+      const saved = localStorage.getItem('pars_mazi_announcements');
+      if (saved) {
+        try {
+          const anns = JSON.parse(saved);
+          const activeAnn = anns.find((a: any) => a.active);
+          if (activeAnn) {
+            setActiveAnnouncement(activeAnn.text);
+          } else {
+            setActiveAnnouncement(null);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        // Default initial announcement
+        setActiveAnnouncement('🎉 YENİ DUYURU: Pars Mazi Edit Arşivi v2 Aktif Edildi! Tüm renk ayarları (CC) güncellendi.');
+      }
+    };
+
+    updateAnnouncement();
+    const interval = setInterval(updateAnnouncement, 1500);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Save states to LocalStorage
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_site_title', siteTitle);
+  }, [siteTitle]);
+
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_site_subtitle', siteSubtitle);
+  }, [siteSubtitle]);
+
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_site_badge', siteBadge);
+  }, [siteBadge]);
+
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_active_status', activeStatusTextState);
+  }, [activeStatusTextState]);
+
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_discord_url', discordUrl);
+  }, [discordUrl]);
+
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_categories', JSON.stringify(categories));
+  }, [categories]);
+
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_effects', JSON.stringify(effects));
+  }, [effects]);
 
   // Synchronize document classes with dark mode state for Tailwind or extra CSS features
   useEffect(() => {
@@ -28,36 +133,27 @@ export default function App() {
   }, [darkMode]);
 
   // Determine active category details
-  const activeCategory = CATEGORIES.find(c => c.id === selectedCategoryId) || null;
+  const activeCategory = categories.find(c => c.id === selectedCategoryId) || null;
 
   // Determine status text to display on the header banner
   const activeStatusText = filterRecentOnly
     ? 'EN SON EKLENENLER LİSTESİ'
     : activeCategory
       ? activeCategory.titleTr
-      : 'EFEKT ARŞİV KÜTÜPHANESİ';
+      : activeStatusTextState;
 
   // Toggle filtering categories
   const handleSelectCategory = (id: string | null) => {
     setSelectedCategoryId(id);
     setFilterRecentOnly(false); // clear recent-only if category clicked
 
-    // Scroll to listings smoothly
-    const listings = document.getElementById('effect-listing-section');
-    if (listings) {
-      listings.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    // Scroll to top or detail smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleOpenRecent = () => {
     setFilterRecentOnly(true);
     setSelectedCategoryId(null); // clear category filter
-
-    // Scroll to listings smoothly
-    const listings = document.getElementById('effect-listing-section');
-    if (listings) {
-      listings.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
   };
 
   return (
@@ -78,74 +174,138 @@ export default function App() {
       <main className="w-full max-w-4xl mx-auto px-4 md:px-6 relative z-10 flex flex-col gap-8 pt-6">
         
         {/* Header (Theme and Visits) */}
-        <Header 
-          darkMode={darkMode} 
-          setDarkMode={setDarkMode} 
-          activeStatusText={activeStatusText}
-        />
+        {!selectedCategoryId && (
+          <Header 
+            darkMode={darkMode} 
+            setDarkMode={setDarkMode} 
+            activeStatusText={activeStatusText}
+            onOpenAdmin={() => setIsAdminOpen(true)}
+          />
+        )}
 
-        {/* Hero Section (Branding & Action Banners) */}
-        <Hero 
-          darkMode={darkMode}
-          onOpenRecent={handleOpenRecent}
-          onOpenPlugins={() => setIsPluginsModalOpen(true)}
-        />
-
-        {/* Categories grid */}
-        <Categories 
-          darkMode={darkMode}
-          selectedCategoryId={selectedCategoryId}
-          onSelectCategory={handleSelectCategory}
-        />
-
-        {/* Main effects search/listing filter section */}
-        <EffectListing
-          darkMode={darkMode}
-          selectedCategoryId={selectedCategoryId}
-          activeCategory={activeCategory}
-          filterRecentOnly={filterRecentOnly}
-          onClearRecentFilter={() => {
-            setFilterRecentOnly(false);
-            setSelectedCategoryId(null);
-          }}
-          onSelectEffect={(effect) => setSelectedEffect(effect)}
-        />
-
-        {/* Discord "Efekt Eklemek İstiyorum" Custom Banner */}
-        <section id="discord-section" className="w-full">
-          <a
-            href="https://discord.gg"
-            target="_blank"
-            rel="noreferrer"
-            className={`group w-full flex items-center justify-center gap-4 p-5 rounded-2xl border text-center font-black cursor-pointer transition-all duration-300 ${
+        {/* Active Announcement Banner with Inline CSS Animation */}
+        {activeAnnouncement && !selectedCategoryId && (
+          <>
+            <style>{`
+              @keyframes announcement-scroll {
+                0% { transform: translateX(100%); }
+                100% { transform: translateX(-100%); }
+              }
+              .scroll-text-track {
+                animation: announcement-scroll 25s linear infinite;
+              }
+              .scroll-text-track:hover {
+                animation-play-state: paused;
+              }
+            `}</style>
+            <div className={`w-full overflow-hidden relative py-3 px-4 rounded-2xl border transition-all duration-300 flex items-center gap-3.5 ${
               darkMode
-                ? 'bg-[#121214] border-neutral-800 hover:border-indigo-500/40 text-white'
-                : 'bg-white border-neutral-200 hover:border-indigo-500/40 text-neutral-800'
-            }`}
-            style={{ boxShadow: darkMode ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 20px rgba(0,0,0,0.02)' }}
-          >
-            <div className="p-2.5 rounded-xl bg-[#5865F2] text-white shadow-[0_0_12px_rgba(88,101,242,0.35)] transition-transform duration-300 group-hover:scale-105">
-              <MessageSquare className="w-5 h-5 fill-current" />
+                ? 'bg-red-950/10 border-red-500/20 text-red-300 shadow-[0_0_15px_rgba(239,68,68,0.05)]'
+                : 'bg-red-50/60 border-red-200 text-red-900'
+            }`}>
+              <div className={`p-1.5 rounded-lg bg-red-600 text-white animate-pulse shrink-0 flex items-center justify-center`}>
+                <Megaphone className="w-4 h-4" />
+              </div>
+              
+              {/* Marquee Container */}
+              <div className="flex-1 overflow-hidden relative w-full h-5 flex items-center select-none font-sans font-bold text-xs">
+                <div className="absolute whitespace-nowrap scroll-text-track pl-4 cursor-pointer">
+                  {activeAnnouncement}
+                </div>
+              </div>
             </div>
-            
-            <div className="flex flex-col items-start leading-tight">
-              <span className="text-sm tracking-tight font-black">Efekt Eklemek İstiyorum</span>
-              <span className="text-[10.5px] text-neutral-500 font-medium mt-0.5">Topluluğumuza katılın, arşivimizi birlikte büyütelim</span>
-            </div>
-            
-            <ExternalLink className="w-4 h-4 text-neutral-500 group-hover:text-[#5865F2] group-hover:translate-x-0.5 transition-transform ml-auto" />
-          </a>
-        </section>
+          </>
+        )}
 
-        {/* Creator profile bio */}
-        <CreatorProfile darkMode={darkMode} />
+        {selectedCategoryId ? (
+          /* Full Page Focused Category Detail View from video */
+          <CategoryDetail
+            darkMode={darkMode}
+            category={activeCategory!}
+            effects={effects}
+            onBack={() => setSelectedCategoryId(null)}
+            onSelectEffect={(effect) => setSelectedEffect(effect)}
+          />
+        ) : (
+          /* Default Portal/Home View */
+          <>
+            {/* Hero Section (Branding & Action Banners) */}
+            <Hero 
+              darkMode={darkMode}
+              onOpenRecent={handleOpenRecent}
+              onOpenPlugins={() => setIsPluginsModalOpen(true)}
+              siteTitle={siteTitle}
+              siteSubtitle={siteSubtitle}
+              siteBadge={siteBadge}
+            />
+
+            {/* Unified Effect Archive Hub Card */}
+            <section 
+              id="archive-hub-section"
+              className={`w-full rounded-3xl border p-6 md:p-8 flex flex-col gap-6 transition-all duration-300 relative ${
+                darkMode
+                  ? 'bg-[#121214] border-neutral-800/80 text-white shadow-xl'
+                  : 'bg-white border-neutral-200 text-neutral-800 shadow-sm'
+              }`}
+              style={{ 
+                boxShadow: darkMode 
+                  ? '0 10px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03)' 
+                  : '0 10px 40px rgba(0,0,0,0.02)' 
+              }}
+            >
+              {/* Ambient subtle glow effect inside card */}
+              {darkMode && (
+                <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-purple-500/5 blur-[120px] pointer-events-none z-0" />
+              )}
+
+              {/* Categories grid */}
+              <div className="relative z-10">
+                <Categories 
+                  darkMode={darkMode}
+                  categories={categories}
+                  selectedCategoryId={selectedCategoryId}
+                  onSelectCategory={handleSelectCategory}
+                />
+              </div>
+            </section>
+
+            {/* Discord "Efekt Eklemek İstiyorum" Custom Banner */}
+            <section id="discord-section" className="w-full">
+              <a
+                href={discordUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={`group w-full flex items-center justify-center gap-4 p-5 rounded-2xl border text-center font-black cursor-pointer transition-all duration-300 ${
+                  darkMode
+                    ? 'bg-[#121214] border-neutral-800 hover:border-indigo-500/40 text-white shadow-lg'
+                    : 'bg-white border-neutral-200 hover:border-indigo-500/40 text-neutral-800 shadow-sm'
+                }`}
+                style={{ boxShadow: darkMode ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 20px rgba(0,0,0,0.02)' }}
+              >
+                <div className="p-2.5 rounded-xl bg-[#5865F2] text-white shadow-[0_0_12px_rgba(88,101,242,0.35)] transition-transform duration-300 group-hover:scale-105">
+                  <MessageSquare className="w-5 h-5 fill-current" />
+                </div>
+                
+                <div className="flex flex-col items-start leading-tight text-left">
+                  <span className="text-sm tracking-tight font-black">Efekt Eklemek İstiyorum</span>
+                  <span className="text-[10.5px] text-neutral-500 font-medium mt-0.5">Topluluğumuza katılın, arşivimizi birlikte büyütelim</span>
+                </div>
+                
+                <ExternalLink className="w-4 h-4 text-neutral-500 group-hover:text-[#5865F2] group-hover:translate-x-0.5 transition-transform ml-auto" />
+              </a>
+            </section>
+
+            {/* Creator profile bio */}
+            <CreatorProfile darkMode={darkMode} />
+          </>
+        )}
 
         {/* Minimal Footer */}
         <footer className="w-full flex flex-col items-center gap-3 mt-4 text-center">
           <div className="h-[1px] w-12 bg-neutral-800/40 rounded-full" />
           <div className="flex flex-col gap-1 items-center">
             <span className="text-xs font-black tracking-widest uppercase font-mono bg-gradient-to-r from-neutral-500 to-neutral-400 bg-clip-text text-transparent">
-              ParsMaziPack
+              {siteTitle}
             </span>
             <span className="text-[10px] text-neutral-500 font-bold tracking-wide mt-0.5">
               After Effects Resources • © {new Date().getFullYear()} All rights reserved.
@@ -172,6 +332,27 @@ export default function App() {
 
       {/* Floating suggestion and complaint Form FAB */}
       <FeedbackForm darkMode={darkMode} />
+
+      {/* Admin Panel Modal Overlay */}
+      <AdminPanel
+        darkMode={darkMode}
+        isOpen={isAdminOpen}
+        onClose={() => setIsAdminOpen(false)}
+        categories={categories}
+        setCategories={setCategories}
+        effects={effects}
+        setEffects={setEffects}
+        siteTitle={siteTitle}
+        setSiteTitle={setSiteTitle}
+        siteSubtitle={siteSubtitle}
+        setSiteSubtitle={setSiteSubtitle}
+        siteBadge={siteBadge}
+        setSiteBadge={setSiteBadge}
+        activeStatusText={activeStatusTextState}
+        setActiveStatusText={setActiveStatusTextState}
+        discordUrl={discordUrl}
+        setDiscordUrl={setDiscordUrl}
+      />
 
     </div>
   );

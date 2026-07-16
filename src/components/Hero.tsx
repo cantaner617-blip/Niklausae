@@ -5,9 +5,19 @@ interface HeroProps {
   darkMode: boolean;
   onOpenRecent: () => void;
   onOpenPlugins: () => void;
+  siteTitle: string;
+  siteSubtitle: string;
+  siteBadge: string;
 }
 
-export default function Hero({ darkMode, onOpenRecent, onOpenPlugins }: HeroProps) {
+export default function Hero({
+  darkMode,
+  onOpenRecent,
+  onOpenPlugins,
+  siteTitle,
+  siteSubtitle,
+  siteBadge,
+}: HeroProps) {
   return (
     <section id="hero-section" className="w-full flex flex-col items-center gap-6 py-6 text-center">
       {/* Badge Indicator */}
@@ -17,7 +27,7 @@ export default function Hero({ darkMode, onOpenRecent, onOpenPlugins }: HeroProp
           : 'bg-neutral-100 border-neutral-200 text-neutral-600'
       }`}>
         <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.7)]" />
-        AFTER EFFECTS PACKS
+        {siteBadge}
       </div>
 
       {/* Main Title Banner Card */}
@@ -32,9 +42,9 @@ export default function Hero({ darkMode, onOpenRecent, onOpenPlugins }: HeroProp
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px]" />
         
         <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase leading-tight select-none">
-          PARS MAZI <br />
+          {siteTitle} <br />
           <span className={`bg-gradient-to-r from-red-500 via-pink-500 to-purple-600 bg-clip-text text-transparent animate-gradient`}>
-            EDIT PACK
+            {siteSubtitle}
           </span>
         </h1>
 
