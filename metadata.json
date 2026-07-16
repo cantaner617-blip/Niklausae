@@ -1,0 +1,6 @@
+{
+  "name": "Pars Mazi",
+  "description": "Premium After Effects and Premiere Pro resource pack for video editors. Includes color corrections, shakes, twixtor settings, transition effects, soundboard and portfolio.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
