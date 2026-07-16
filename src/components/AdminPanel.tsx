@@ -60,7 +60,7 @@ export default function AdminPanel({
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
 
   // Active Navigation Tab
-  const [activeTab, setActiveTab] = useState<'settings' | 'announcements' | 'categories' | 'effects'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'announcements' | 'categories' | 'effects' | 'export_code'>('settings');
 
   // Announcements State
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -469,6 +469,7 @@ export default function AdminPanel({
                 { id: 'announcements', label: 'DUYURU SİSTEMİ', icon: 'Megaphone' },
                 { id: 'categories', label: 'KATEGORİLER', icon: 'Layout' },
                 { id: 'effects', label: 'EFEKT KÜTÜPHANESİ', icon: 'Layers' },
+                { id: 'export_code', label: 'PROJEYİ YAYINLA / DIŞA AKTAR', icon: 'Download' },
               ].map((tab) => {
                 const IconComp = (LucideIcons as any)[tab.icon] || LucideIcons.File;
                 const isActive = activeTab === tab.id;
@@ -1198,6 +1199,275 @@ export default function AdminPanel({
                         );
                       })}
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 5: EXPORT/PUBLISH CODE FOR GITHUB PAGES */}
+              {activeTab === 'export_code' && (
+                <div className="flex flex-col gap-6 animate-fade-in">
+                  <div className="flex flex-col leading-tight border-b border-neutral-800/40 pb-3">
+                    <h3 className="text-base font-black uppercase tracking-tight">Projeyi GitHub Pages'te Güncelle</h3>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">Sitede eklediğiniz tüm kategoriler ve presetler şu an tarayıcınızda kayıtlıdır. Bunları tüm ziyaretçiler için kalıcı kılmak için aşağıdaki adımları izleyin.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className={`p-4 rounded-xl border flex flex-col gap-2 ${
+                      darkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-neutral-50 border-neutral-200'
+                    }`}>
+                      <div className="w-7 h-7 rounded-full bg-violet-500/10 text-violet-400 flex items-center justify-center font-bold text-xs">1</div>
+                      <h4 className="text-xs font-bold text-violet-400">Veriyi Kopyalayın veya İndirin</h4>
+                      <p className="text-[10.5px] text-neutral-500 leading-relaxed">
+                        Aşağıda otomatik oluşturulan veri kodunu kopyalayın veya doğrudan dosya olarak indirin.
+                      </p>
+                    </div>
+
+                    <div className={`p-4 rounded-xl border flex flex-col gap-2 ${
+                      darkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-neutral-50 border-neutral-200'
+                    }`}>
+                      <div className="w-7 h-7 rounded-full bg-violet-500/10 text-violet-400 flex items-center justify-center font-bold text-xs">2</div>
+                      <h4 className="text-xs font-bold text-violet-400">data.ts Dosyasını Güncelleyin</h4>
+                      <p className="text-[10.5px] text-neutral-500 leading-relaxed">
+                        Projenizin içindeki <code className="text-rose-400 font-mono">src/data.ts</code> dosyasını açıp tüm içeriğini silin ve bu kodları yapıştırın.
+                      </p>
+                    </div>
+
+                    <div className={`p-4 rounded-xl border flex flex-col gap-2 ${
+                      darkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-neutral-50 border-neutral-200'
+                    }`}>
+                      <div className="w-7 h-7 rounded-full bg-violet-500/10 text-violet-400 flex items-center justify-center font-bold text-xs">3</div>
+                      <h4 className="text-xs font-bold text-violet-400">GitHub'a Gönderin (Commit & Push)</h4>
+                      <p className="text-[10.5px] text-neutral-500 leading-relaxed">
+                        Değişikliği kaydedip GitHub'a yüklediğinizde, siteniz yeni kategoriler ve presetlerle anında tüm dünya için güncellenecektir!
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black uppercase text-neutral-500 font-mono">OTOMATİK OLUŞTURULAN src/data.ts DOSYA İÇERİĞİ</span>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const code = (() => {
+                              const requiredPlugins = [
+                                {
+                                  name: 'Sapphire (S_)',
+                                  category: 'Sallantı, Parlama ve Geçişler',
+                                  description: 'After Effects video editörlerinin olmazsa olmazı ana efekt paketidir. S_Shake, S_Glow, S_Distort vb. yüzlerce gelişmiş efekt içerir.',
+                                  requirements: 'After Effects CC 2018 ve üzeri',
+                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                                  downloadUrl: '#',
+                                },
+                                {
+                                  name: 'Boris FX Continuum (BCC)',
+                                  category: 'Görsel Efektler ve Geçişler',
+                                  description: 'BCC Fast Lens Blur, BCC Chroma Bands ve 3D parçacık efektleri için kullanılır. Özellikle anime ve oyun editlerinde sıkça tercih edilir.',
+                                  requirements: 'After Effects CC 2020 ve üzeri',
+                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                                  downloadUrl: '#',
+                                },
+                                {
+                                  name: 'Magic Bullet Looks (Red Giant)',
+                                  category: 'Renk Derecelendirme (CC)',
+                                  description: 'Renk efektlerimizin (CC) büyük bir çoğunluğu bu plugini gerektirir. Sinematik ve doygun renk ayarları için profesyonel araçlar sunar.',
+                                  requirements: 'After Effects CC 2019 ve üzeri',
+                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                                  downloadUrl: '#',
+                                },
+                                {
+                                  name: 'Twixtor / Twixtor Pro',
+                                  category: 'Yavaş Çekim (Slow-motion)',
+                                  description: 'Videolarınızı kare atlamadan, yapay zeka desteğiyle pürüzsüzce yavaşlatmanızı sağlar. Anime ve spor editleri için kritik öneme sahiptir.',
+                                  requirements: 'After Effects CC 2015 ve üzeri',
+                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                                  downloadUrl: '#',
+                                },
+                                {
+                                  name: 'Deep Glow',
+                                  category: 'Gerçekçi Parlama Efekti',
+                                  description: 'After Effects\'in varsayılan glow efektinden kat kat daha gerçekçi, fiziksel tabanlı bir light flare üretir.',
+                                  requirements: 'After Effects CC 2017 ve üzeri',
+                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                                  downloadUrl: '#',
+                                },
+                                {
+                                  name: 'RSMB (ReelSmart Motion Blur)',
+                                  category: 'Hareket Bulanıklığı',
+                                  description: 'Hızlı hareket eden nesnelere otomatik olarak gerçekçi kamera hareket bulanıklığı ekler, geçişlerin ve shake\'lerin daha akıcı görünmesini sağlar.',
+                                  requirements: 'After Effects CC 2018 ve üzeri',
+                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                                  downloadUrl: '#',
+                                },
+                              ];
+                              return `import { Category, EffectItem, RequiredPlugin } from './types';
+
+export const CATEGORIES: Category[] = ${JSON.stringify(categories, null, 2)};
+
+export const REQUIRED_PLUGINS: RequiredPlugin[] = ${JSON.stringify(requiredPlugins, null, 2)};
+
+export const EFFECT_ITEMS: EffectItem[] = ${JSON.stringify(effects, null, 2)};
+`;
+                            })();
+                            
+                            navigator.clipboard.writeText(code);
+                            alert('Kod başarıyla panoya kopyalandı! src/data.ts dosyasının içine yapıştırabilirsiniz.');
+                          }}
+                          className="py-2 px-3 bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-black rounded-lg uppercase tracking-wider active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <LucideIcons.Copy className="w-3.5 h-3.5" />
+                          KODU KOPYALA
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const code = (() => {
+                              const requiredPlugins = [
+                                {
+                                  name: 'Sapphire (S_)',
+                                  category: 'Sallantı, Parlama ve Geçişler',
+                                  description: 'After Effects video editörlerinin olmazsa olmazı ana efekt paketidir. S_Shake, S_Glow, S_Distort vb. yüzlerce gelişmiş efekt içerir.',
+                                  requirements: 'After Effects CC 2018 ve üzeri',
+                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                                  downloadUrl: '#',
+                                },
+                                {
+                                  name: 'Boris FX Continuum (BCC)',
+                                  category: 'Görsel Efektler ve Geçişler',
+                                  description: 'BCC Fast Lens Blur, BCC Chroma Bands ve 3D parçacık efektleri için kullanılır. Özellikle anime ve oyun editlerinde sıkça tercih edilir.',
+                                  requirements: 'After Effects CC 2020 ve üzeri',
+                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                                  downloadUrl: '#',
+                                },
+                                {
+                                  name: 'Magic Bullet Looks (Red Giant)',
+                                  category: 'Renk Derecelendirme (CC)',
+                                  description: 'Renk efektlerimizin (CC) büyük bir çoğunluğu bu plugini gerektirir. Sinematik ve doygun renk ayarları için profesyonel araçlar sunar.',
+                                  requirements: 'After Effects CC 2019 ve üzeri',
+                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                                  downloadUrl: '#',
+                                },
+                                {
+                                  name: 'Twixtor / Twixtor Pro',
+                                  category: 'Yavaş Çekim (Slow-motion)',
+                                  description: 'Videolarınızı kare atlamadan, yapay zeka desteğiyle pürüzsüzce yavaşlatmanızı sağlar. Anime ve spor editleri için kritik öneme sahiptir.',
+                                  requirements: 'After Effects CC 2015 ve üzeri',
+                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                                  downloadUrl: '#',
+                                },
+                                {
+                                  name: 'Deep Glow',
+                                  category: 'Gerçekçi Parlama Efekti',
+                                  description: 'After Effects\'in varsayılan glow efektinden kat kat daha gerçekçi, fiziksel tabanlı bir light flare üretir.',
+                                  requirements: 'After Effects CC 2017 ve üzeri',
+                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                                  downloadUrl: '#',
+                                },
+                                {
+                                  name: 'RSMB (ReelSmart Motion Blur)',
+                                  category: 'Hareket Bulanıklığı',
+                                  description: 'Hızlı hareket eden nesnelere otomatik olarak gerçekçi kamera hareket bulanıklığı ekler, geçişlerin ve shake\'lerin daha akıcı görünmesini sağlar.',
+                                  requirements: 'After Effects CC 2018 ve üzeri',
+                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                                  downloadUrl: '#',
+                                },
+                              ];
+                              return `import { Category, EffectItem, RequiredPlugin } from './types';
+
+export const CATEGORIES: Category[] = ${JSON.stringify(categories, null, 2)};
+
+export const REQUIRED_PLUGINS: RequiredPlugin[] = ${JSON.stringify(requiredPlugins, null, 2)};
+
+export const EFFECT_ITEMS: EffectItem[] = ${JSON.stringify(effects, null, 2)};
+`;
+                            })();
+                            
+                            const blob = new Blob([code], { type: 'text/typescript' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'data.ts';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="py-2 px-3 bg-neutral-800 hover:bg-neutral-750 text-white text-[10px] font-black rounded-lg uppercase tracking-wider active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 border border-neutral-700/80"
+                        >
+                          <LucideIcons.Download className="w-3.5 h-3.5" />
+                          DOSYAYI İNDİR (DATA.TS)
+                        </button>
+                      </div>
+                    </div>
+
+                    <textarea
+                      readOnly
+                      value={(() => {
+                        const requiredPlugins = [
+                          {
+                            name: 'Sapphire (S_)',
+                            category: 'Sallantı, Parlama ve Geçişler',
+                            description: 'After Effects video editörlerinin olmazsa olmazı ana efekt paketidir. S_Shake, S_Glow, S_Distort vb. yüzlerce gelişmiş efekt içerir.',
+                            requirements: 'After Effects CC 2018 ve üzeri',
+                            videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                            downloadUrl: '#',
+                          },
+                          {
+                            name: 'Boris FX Continuum (BCC)',
+                            category: 'Görsel Efektler ve Geçişler',
+                            description: 'BCC Fast Lens Blur, BCC Chroma Bands ve 3D parçacık efektleri için kullanılır. Özellikle anime ve oyun editlerinde sıkça tercih edilir.',
+                            requirements: 'After Effects CC 2020 ve üzeri',
+                            videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                            downloadUrl: '#',
+                          },
+                          {
+                            name: 'Magic Bullet Looks (Red Giant)',
+                            category: 'Renk Derecelendirme (CC)',
+                            description: 'Renk efektlerimizin (CC) büyük bir çoğunluğu bu plugini gerektirir. Sinematik ve doygun renk ayarları için profesyonel araçlar sunar.',
+                            requirements: 'After Effects CC 2019 ve üzeri',
+                            videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                            downloadUrl: '#',
+                          },
+                          {
+                            name: 'Twixtor / Twixtor Pro',
+                            category: 'Yavaş Çekim (Slow-motion)',
+                            description: 'Videolarınızı kare atlamadan, yapay zeka desteğiyle pürüzsüzce yavaşlatmanızı sağlar. Anime ve spor editleri için kritik öneme sahiptir.',
+                            requirements: 'After Effects CC 2015 ve üzeri',
+                            videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                            downloadUrl: '#',
+                          },
+                          {
+                            name: 'Deep Glow',
+                            category: 'Gerçekçi Parlama Efekti',
+                            description: 'After Effects\'in varsayılan glow efektinden kat kat daha gerçekçi, fiziksel tabanlı bir light flare üretir.',
+                            requirements: 'After Effects CC 2017 ve üzeri',
+                            videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                            downloadUrl: '#',
+                          },
+                          {
+                            name: 'RSMB (ReelSmart Motion Blur)',
+                            category: 'Hareket Bulanıklığı',
+                            description: 'Hızlı hareket eden nesnelere otomatik olarak gerçekçi kamera hareket bulanıklığı ekler, geçişlerin ve shake\'lerin daha akıcı görünmesini sağlar.',
+                            requirements: 'After Effects CC 2018 ve üzeri',
+                            videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                            downloadUrl: '#',
+                          },
+                        ];
+                        return `import { Category, EffectItem, RequiredPlugin } from './types';
+
+export const CATEGORIES: Category[] = ${JSON.stringify(categories, null, 2)};
+
+export const REQUIRED_PLUGINS: RequiredPlugin[] = ${JSON.stringify(requiredPlugins, null, 2)};
+
+export const EFFECT_ITEMS: EffectItem[] = ${JSON.stringify(effects, null, 2)};
+`;
+                      })()}
+                      className={`w-full h-[220px] p-4 rounded-xl border text-[10.5px] font-mono leading-relaxed focus:outline-none focus:ring-1 focus:ring-violet-500 overflow-y-auto ${
+                        darkMode ? 'bg-neutral-950 border-neutral-850 text-neutral-400' : 'bg-neutral-50 border-neutral-200 text-neutral-600'
+                      }`}
+                    />
                   </div>
                 </div>
               )}
