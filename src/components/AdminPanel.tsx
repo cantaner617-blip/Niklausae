@@ -10,7 +10,8 @@ import {
   deleteEffectFromFirebase,
   saveAnnouncementToFirebase,
   deleteAnnouncementFromFirebase,
-  subscribeToAnnouncements
+  subscribeToAnnouncements,
+  setVisitorCountInFirebase
 } from '../lib/firebase';
 
 interface AdminPanelProps {
@@ -51,6 +52,8 @@ interface AdminPanelProps {
   creatorPortrait: string;
   setCreatorPortrait: (url: string) => void;
   autoSaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  visitCount: number;
+  setVisitCount: (count: number) => void;
 }
 
 interface Announcement {
@@ -59,6 +62,7 @@ interface Announcement {
   type: 'success' | 'info' | 'warning' | 'error' | 'discord';
   active: boolean;
   createdAt: string;
+  link?: string;
 }
 
 export default function AdminPanel({
@@ -98,6 +102,8 @@ export default function AdminPanel({
   creatorPortrait,
   setCreatorPortrait,
   autoSaveStatus = 'idle',
+  visitCount,
+  setVisitCount,
 }: AdminPanelProps) {
   // Authentication State
   const [password, setPassword] = useState('');
@@ -120,6 +126,7 @@ export default function AdminPanel({
   const [editingAnnouncementId, setEditingAnnouncementId] = useState<string | null>(null);
   const [announcementText, setAnnouncementText] = useState('');
   const [announcementType, setAnnouncementType] = useState<Announcement['type']>('info');
+  const [announcementLink, setAnnouncementLink] = useState('');
 
   // Category Form State
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
@@ -145,28 +152,36 @@ export default function AdminPanel({
   const [effectAfterImage, setEffectAfterImage] = useState('');
   const [effectVideoPreviewUrl, setEffectVideoPreviewUrl] = useState('');
 
-  // Load announcements from localStorage on mount
+  // Load announcements from localStorage or Firebase real-time subscription on mount
   useEffect(() => {
-    const saved = localStorage.getItem('pars_mazi_announcements');
-    if (saved) {
-      try {
-        setAnnouncements(JSON.parse(saved));
-      } catch (e) {
-        console.error('Announcements load error', e);
+    let unsub: (() => void) | undefined;
+
+    if (!isFirebaseConfigured()) {
+      const saved = localStorage.getItem('pars_mazi_announcements');
+      if (saved) {
+        try {
+          setAnnouncements(JSON.parse(saved));
+        } catch (e) {
+          console.error('Announcements load error', e);
+        }
+      } else {
+        // Default initial announcement
+        const defaultAnn = [
+          {
+            id: 'default-1',
+            text: '🎉 YENİ GÜNCELLEME: Pars Mazi Edit Arşivi v2 Aktif Edildi! Tüm renk ayarları (CC) güncellendi.',
+            type: 'info' as const,
+            active: true,
+            createdAt: new Date().toLocaleDateString('tr-TR'),
+          },
+        ];
+        setAnnouncements(defaultAnn);
+        localStorage.setItem('pars_mazi_announcements', JSON.stringify(defaultAnn));
       }
     } else {
-      // Default initial announcement
-      const defaultAnn = [
-        {
-          id: 'default-1',
-          text: '🎉 YENİ GÜNCELLEME: Pars Mazi Edit Arşivi v2 Aktif Edildi! Tüm renk ayarları (CC) güncellendi.',
-          type: 'info' as const,
-          active: true,
-          createdAt: new Date().toLocaleDateString('tr-TR'),
-        },
-      ];
-      setAnnouncements(defaultAnn);
-      localStorage.setItem('pars_mazi_announcements', JSON.stringify(defaultAnn));
+      unsub = subscribeToAnnouncements((anns) => {
+        setAnnouncements(anns);
+      });
     }
 
     // Check if previously authenticated in this session
@@ -174,6 +189,10 @@ export default function AdminPanel({
     if (storedAuth === 'true') {
       setIsAuthenticated(true);
     }
+
+    return () => {
+      if (unsub) unsub();
+    };
   }, []);
 
   // Save announcements to localStorage whenever it changes
@@ -282,31 +301,64 @@ export default function AdminPanel({
   const handleAddAnnouncement = async () => {
     if (!announcementText.trim()) return;
 
-    const newAnn: Announcement = {
-      id: Date.now().toString(),
-      text: announcementText,
-      type: announcementType,
-      active: true,
-      createdAt: new Date().toLocaleDateString('tr-TR'),
-    };
+    if (editingAnnouncementId) {
+      // Edit mode
+      const existing = announcements.find(a => a.id === editingAnnouncementId);
+      if (!existing) return;
+      
+      const updatedAnn: Announcement = {
+        ...existing,
+        text: announcementText,
+        type: announcementType,
+        link: announcementLink.trim() || undefined,
+      };
 
-    if (isFirebaseConfigured()) {
-      try {
-        // If making this active, deactivate all others so we only have one primary scroll banner
-        for (const ann of announcements) {
-          if (ann.active) {
-            await saveAnnouncementToFirebase({ ...ann, active: false });
-          }
+      if (isFirebaseConfigured()) {
+        try {
+          await saveAnnouncementToFirebase(updatedAnn);
+        } catch (e) {
+          console.error("Firebase announcement edit error:", e);
         }
-        await saveAnnouncementToFirebase(newAnn);
-      } catch (e) {
-        console.error("Firebase announcement save error:", e);
+      } else {
+        const updated = announcements.map(a => a.id === editingAnnouncementId ? updatedAnn : a);
+        saveAnnouncements(updated);
       }
+      setEditingAnnouncementId(null);
     } else {
-      const updated = announcements.map(ann => ({ ...ann, active: false }));
-      saveAnnouncements([newAnn, ...updated]);
+      // Add mode
+      const newAnn: Announcement = {
+        id: Date.now().toString(),
+        text: announcementText,
+        type: announcementType,
+        active: true,
+        createdAt: new Date().toLocaleDateString('tr-TR'),
+        link: announcementLink.trim() || undefined,
+      };
+
+      if (isFirebaseConfigured()) {
+        try {
+          await saveAnnouncementToFirebase(newAnn);
+        } catch (e) {
+          console.error("Firebase announcement save error:", e);
+        }
+      } else {
+        saveAnnouncements([newAnn, ...announcements]);
+      }
     }
     setAnnouncementText('');
+    setAnnouncementLink('');
+  };
+
+  const handleEditAnnouncementClick = (ann: Announcement) => {
+    setEditingAnnouncementId(ann.id);
+    setAnnouncementText(ann.text);
+    setAnnouncementType(ann.type);
+    setAnnouncementLink(ann.link || '');
+    // Scroll smoothly to the form so the admin can see it loaded
+    const formEl = document.getElementById('announcement-form-container');
+    if (formEl) {
+      formEl.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   const handleToggleAnnouncementActive = async (id: string) => {
@@ -316,15 +368,7 @@ export default function AdminPanel({
         if (!targetAnn) return;
         
         const newActiveStatus = !targetAnn.active;
-        
-        for (const ann of announcements) {
-          if (ann.id === id) {
-            await saveAnnouncementToFirebase({ ...ann, active: newActiveStatus });
-          } else if (newActiveStatus && ann.active) {
-            // Deactivate others if this is being turned ON
-            await saveAnnouncementToFirebase({ ...ann, active: false });
-          }
-        }
+        await saveAnnouncementToFirebase({ ...targetAnn, active: newActiveStatus });
       } catch (e) {
         console.error("Firebase announcement toggle error:", e);
       }
@@ -333,7 +377,7 @@ export default function AdminPanel({
         if (ann.id === id) {
           return { ...ann, active: !ann.active };
         }
-        return { ...ann, active: false };
+        return ann;
       });
       saveAnnouncements(updated);
     }
@@ -924,6 +968,27 @@ export default function AdminPanel({
                           />
                         </div>
 
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-black uppercase text-neutral-500">TOPLAM ZİYARETÇİ SAYISI (GERÇEK ZAMANLI)</label>
+                          <input
+                            type="number"
+                            value={visitCount}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (!isNaN(val)) {
+                                setVisitCount(val);
+                                localStorage.setItem('pars_mazi_visits', val.toString());
+                                if (isFirebaseConfigured()) {
+                                  setVisitorCountInFirebase(val).catch(err => console.error(err));
+                                }
+                              }
+                            }}
+                            className={`py-3 px-4 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                              darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-800'
+                            }`}
+                          />
+                        </div>
+
                         <div className="flex flex-col gap-1.5 sm:col-span-2">
                           <label className="text-[10px] font-black uppercase text-neutral-500">DISCORD SUNUCU KATILIM LİNKİ</label>
                           <input
@@ -1209,16 +1274,31 @@ export default function AdminPanel({
                   </div>
 
                   {/* Announcement Creation Form */}
-                  <div className={`p-4 rounded-2xl border flex flex-col gap-4 ${
+                  <div id="announcement-form-container" className={`p-4 rounded-2xl border flex flex-col gap-4 ${
                     darkMode ? 'bg-[#101012] border-neutral-800/80' : 'bg-neutral-50 border-neutral-200'
                   }`}>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-black uppercase text-neutral-400">DUYURU METNİ</label>
+                      <label className="text-[10px] font-black uppercase text-neutral-400">
+                        {editingAnnouncementId ? 'DUYURU METNİNİ DÜZENLE' : 'DUYURU METNİ'}
+                      </label>
                       <textarea
                         value={announcementText}
                         onChange={(e) => setAnnouncementText(e.target.value)}
                         placeholder="Duyuru mesajınızı buraya yazın..."
                         rows={2}
+                        className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                          darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                        }`}
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-black uppercase text-neutral-400">YÖNLENDİRME LİNKİ (OPSİYONEL - ÖRN: DISCORD LİNKİ VEYA SİTE İÇİ ETİKET)</label>
+                      <input
+                        type="text"
+                        value={announcementLink}
+                        onChange={(e) => setAnnouncementLink(e.target.value)}
+                        placeholder="https://discord.gg/davet-kodu veya #archive-hub-section"
                         className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
                           darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
                         }`}
@@ -1243,12 +1323,28 @@ export default function AdminPanel({
                         </select>
                       </div>
 
-                      <button
-                        onClick={handleAddAnnouncement}
-                        className="py-2.5 px-6 bg-violet-600 hover:bg-violet-700 text-white text-xs font-black rounded-xl uppercase tracking-wider transition-all shadow-md cursor-pointer"
-                      >
-                        YENİ DUYURUYU YAYINLA
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {editingAnnouncementId && (
+                          <button
+                            onClick={() => {
+                              setEditingAnnouncementId(null);
+                              setAnnouncementText('');
+                              setAnnouncementLink('');
+                            }}
+                            className={`py-2.5 px-4 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
+                              darkMode ? 'border-neutral-800 text-neutral-400 hover:text-white' : 'border-neutral-200 text-neutral-700'
+                            }`}
+                          >
+                            Vazgeç
+                          </button>
+                        )}
+                        <button
+                          onClick={handleAddAnnouncement}
+                          className="py-2.5 px-6 bg-violet-600 hover:bg-violet-700 text-white text-xs font-black rounded-xl uppercase tracking-wider transition-all shadow-md cursor-pointer"
+                        >
+                          {editingAnnouncementId ? 'DUYURUYU GÜNCELLE' : 'YENİ DUYURUYU YAYINLA'}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1275,6 +1371,7 @@ export default function AdminPanel({
                               ann.type === 'success' ? 'bg-emerald-500/10 text-emerald-400' :
                               ann.type === 'warning' ? 'bg-amber-500/10 text-amber-400' :
                               ann.type === 'error' ? 'bg-red-500/10 text-red-400' :
+                              ann.type === 'discord' ? 'bg-indigo-500/10 text-indigo-400' :
                               'bg-blue-500/10 text-blue-400'
                             }`}>
                               <LucideIcons.Megaphone className="w-4.5 h-4.5" />
@@ -1283,9 +1380,19 @@ export default function AdminPanel({
                               <p className={`text-xs font-semibold leading-relaxed ${darkMode ? 'text-white' : 'text-neutral-800'}`}>
                                 {ann.text}
                               </p>
-                              <span className="text-[9px] font-mono text-neutral-500 mt-1 uppercase">
-                                TARİH: {ann.createdAt} • DURUM: {ann.active ? 'YAYINDA' : 'PASİF'}
-                              </span>
+                              <div className="flex flex-wrap items-center gap-2 mt-1">
+                                <span className="text-[9px] font-mono text-neutral-500 uppercase">
+                                  TARİH: {ann.createdAt} • DURUM: {ann.active ? 'YAYINDA' : 'PASİF'}
+                                </span>
+                                {ann.link && (
+                                  <span className={`text-[8.5px] font-semibold flex items-center gap-1 px-1.5 py-0.5 rounded-md border ${
+                                    darkMode ? 'bg-violet-950/20 border-violet-800/30 text-violet-400' : 'bg-violet-50 border-violet-150 text-violet-700'
+                                  }`}>
+                                    <LucideIcons.ExternalLink className="w-2.5 h-2.5" />
+                                    {ann.link.length > 25 ? ann.link.substring(0, 25) + '...' : ann.link}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
 
@@ -1301,6 +1408,16 @@ export default function AdminPanel({
                               {ann.active ? 'YAYINDA' : 'AKTİF ET'}
                             </button>
                             
+                            <button
+                              onClick={() => handleEditAnnouncementClick(ann)}
+                              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                                darkMode ? 'border-neutral-800 hover:bg-neutral-850 text-neutral-400 hover:text-white' : 'border-neutral-200 hover:bg-neutral-100 text-neutral-650'
+                              }`}
+                              title="Duyuruyu Düzenle"
+                            >
+                              <LucideIcons.Edit2 className="w-4 h-4" />
+                            </button>
+
                             <button
                               onClick={() => handleDeleteAnnouncement(ann.id)}
                               className="p-1.5 rounded-lg text-neutral-500 hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"

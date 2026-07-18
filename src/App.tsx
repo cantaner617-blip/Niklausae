@@ -11,14 +11,18 @@ import CategoryDetail from './components/CategoryDetail';
 import AdminPanel from './components/AdminPanel';
 import { CATEGORIES, EFFECT_ITEMS } from './data';
 import { EffectItem, Category } from './types';
-import { MessageSquare, ExternalLink, Megaphone } from 'lucide-react';
+import { MessageSquare, ExternalLink, Megaphone, ChevronLeft, ChevronRight } from 'lucide-react';
 import { 
   isFirebaseConfigured, 
   subscribeToGeneralSettings, 
   subscribeToCategories, 
   subscribeToEffects, 
   subscribeToAnnouncements,
-  saveGeneralSettings
+  saveGeneralSettings,
+  Announcement,
+  subscribeToVisitorCount,
+  incrementVisitorCount,
+  setVisitorCountInFirebase
 } from './lib/firebase';
 
 export default function App() {
@@ -131,8 +135,16 @@ export default function App() {
     return EFFECT_ITEMS;
   });
 
-  // Dynamic active announcement
-  const [activeAnnouncement, setActiveAnnouncement] = useState<string | null>(null);
+  // Realtime visitor count state
+  const [visitCount, setVisitCount] = useState<number>(() => {
+    const stored = localStorage.getItem('pars_mazi_visits');
+    return stored ? parseInt(stored, 10) : 1474;
+  });
+
+  // Dynamic active announcements carousel states
+  const [activeAnnouncements, setActiveAnnouncements] = useState<Announcement[]>([]);
+  const [currentAnnIndex, setCurrentAnnIndex] = useState<number>(0);
+  const [isAnnHovered, setIsAnnHovered] = useState<boolean>(false);
 
   // Auto-Save state & refs to prevent infinite loop or saving on mount
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -267,18 +279,21 @@ export default function App() {
         if (saved) {
           try {
             const anns = JSON.parse(saved);
-            const activeAnn = anns.find((a: any) => a.active);
-            if (activeAnn) {
-              setActiveAnnouncement(activeAnn.text);
-            } else {
-              setActiveAnnouncement(null);
-            }
+            const activeAnns = anns.filter((a: any) => a.active);
+            setActiveAnnouncements(activeAnns);
           } catch (e) {
             console.error(e);
           }
         } else {
           // Default initial announcement
-          setActiveAnnouncement('🎉 YENİ DUYURU: Pars Mazi Edit Arşivi v2 Aktif Edildi! Tüm renk ayarları (CC) güncellendi.');
+          const defaultAnn: Announcement = {
+            id: 'default-1',
+            text: '🎉 YENİ GÜNCELLEME: Pars Mazi Edit Arşivi v2 Aktif Edildi! Tüm renk ayarları (CC) güncellendi.',
+            type: 'info',
+            active: true,
+            createdAt: new Date().toLocaleDateString('tr-TR'),
+          };
+          setActiveAnnouncements([defaultAnn]);
         }
       };
 
@@ -287,14 +302,156 @@ export default function App() {
       return () => clearInterval(interval);
     } else {
       const unsubAnnouncements = subscribeToAnnouncements((anns) => {
-        const activeAnn = anns.find(a => a.active);
-        if (activeAnn) {
-          setActiveAnnouncement(activeAnn.text);
-        } else {
-          setActiveAnnouncement(null);
-        }
+        const activeAnns = anns.filter(a => a.active);
+        setActiveAnnouncements(activeAnns);
       });
       return () => unsubAnnouncements();
+    }
+  }, []);
+
+  // Auto-cycle active announcements carousel
+  useEffect(() => {
+    if (activeAnnouncements.length <= 1 || isAnnHovered) return;
+
+    const interval = setInterval(() => {
+      setCurrentAnnIndex((prev) => (prev + 1) % activeAnnouncements.length);
+    }, 6000);
+
+    return () => clearInterval(interval);
+  }, [activeAnnouncements, isAnnHovered]);
+
+  // Keep index within bounds if active list size changes
+  useEffect(() => {
+    if (currentAnnIndex >= activeAnnouncements.length) {
+      setCurrentAnnIndex(0);
+    }
+  }, [activeAnnouncements, currentAnnIndex]);
+
+  // Real-time synchronization of local storage changes across open tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (!e.key) return;
+      if (isFirebaseConfigured()) return; // Let Firebase handle real-time sync if configured
+      
+      switch (e.key) {
+        case 'pars_mazi_site_title':
+          if (e.newValue) setSiteTitle(e.newValue);
+          break;
+        case 'pars_mazi_site_subtitle':
+          if (e.newValue) setSiteSubtitle(e.newValue);
+          break;
+        case 'pars_mazi_site_badge':
+          if (e.newValue) setSiteBadge(e.newValue);
+          break;
+        case 'pars_mazi_active_status':
+          if (e.newValue) setActiveStatusTextState(e.newValue);
+          break;
+        case 'pars_mazi_discord_url':
+          if (e.newValue) setDiscordUrl(e.newValue);
+          break;
+        case 'pars_mazi_creator_name':
+          if (e.newValue) setCreatorName(e.newValue);
+          break;
+        case 'pars_mazi_creator_title':
+          if (e.newValue) setCreatorTitle(e.newValue);
+          break;
+        case 'pars_mazi_creator_bio':
+          if (e.newValue) setCreatorBio(e.newValue);
+          break;
+        case 'pars_mazi_creator_experience':
+          if (e.newValue) setCreatorExperience(e.newValue);
+          break;
+        case 'pars_mazi_creator_youtube':
+          if (e.newValue) setCreatorYoutube(e.newValue);
+          break;
+        case 'pars_mazi_creator_instagram':
+          if (e.newValue) setCreatorInstagram(e.newValue);
+          break;
+        case 'pars_mazi_creator_discord':
+          if (e.newValue) setCreatorDiscord(e.newValue);
+          break;
+        case 'pars_mazi_creator_tiktok':
+          if (e.newValue) setCreatorTiktok(e.newValue);
+          break;
+        case 'pars_mazi_creator_portrait':
+          setCreatorPortrait(e.newValue || '');
+          break;
+        case 'pars_mazi_categories':
+          if (e.newValue) {
+            try {
+              setCategories(JSON.parse(e.newValue));
+            } catch (err) {
+              console.error(err);
+            }
+          }
+          break;
+        case 'pars_mazi_effects':
+          if (e.newValue) {
+            try {
+              setEffects(JSON.parse(e.newValue));
+            } catch (err) {
+              console.error(err);
+            }
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Real-time visitor tracking logic (prevents refresh spamming via sessionStorage)
+  useEffect(() => {
+    const sessionActive = sessionStorage.getItem('pars_mazi_session_active');
+    const isNewSession = !sessionActive;
+    
+    if (isNewSession) {
+      sessionStorage.setItem('pars_mazi_session_active', 'true');
+    }
+
+    if (isFirebaseConfigured()) {
+      if (isNewSession) {
+        incrementVisitorCount();
+      }
+      
+      const unsub = subscribeToVisitorCount((count) => {
+        setVisitCount(count);
+        localStorage.setItem('pars_mazi_visits', count.toString());
+      });
+      
+      return () => unsub();
+    } else {
+      const stored = localStorage.getItem('pars_mazi_visits');
+      let currentCount = stored ? parseInt(stored, 10) : 1474;
+      
+      if (isNewSession) {
+        currentCount += 1;
+        localStorage.setItem('pars_mazi_visits', currentCount.toString());
+      }
+      setVisitCount(currentCount);
+
+      // Listen for local changes to keep tabs in sync if offline
+      const handleLocalVisits = (e: StorageEvent) => {
+        if (e.key === 'pars_mazi_visits' && e.newValue) {
+          setVisitCount(parseInt(e.newValue, 10));
+        }
+      };
+      window.addEventListener('storage', handleLocalVisits);
+
+      // Periodically simulate small natural increase only when Firebase is offline to keep UI dynamic
+      const interval = setInterval(() => {
+        setVisitCount(prev => {
+          const next = prev + (Math.random() > 0.85 ? 1 : 0);
+          localStorage.setItem('pars_mazi_visits', next.toString());
+          return next;
+        });
+      }, 30000);
+
+      return () => {
+        window.removeEventListener('storage', handleLocalVisits);
+        clearInterval(interval);
+      };
     }
   }, []);
 
@@ -360,6 +517,66 @@ export default function App() {
     setSelectedCategoryId(null); // clear category filter
   };
 
+  const handleAnnouncementClick = (ann: Announcement) => {
+    if (!ann.link) return;
+    if (ann.link.startsWith('http://') || ann.link.startsWith('https://')) {
+      window.open(ann.link, '_blank', 'noopener,noreferrer');
+    } else if (ann.link.startsWith('#')) {
+      const el = document.querySelector(ann.link);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
+
+  const activeAnn = activeAnnouncements[currentAnnIndex] || null;
+
+  const getAnnouncementStyles = (type: Announcement['type']) => {
+    switch (type) {
+      case 'success':
+        return {
+          bgColor: darkMode 
+            ? 'bg-emerald-950/15 border-emerald-500/20 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.05)]' 
+            : 'bg-emerald-50/75 border-emerald-200 text-emerald-900',
+          badgeBg: 'bg-emerald-600',
+          icon: <Megaphone className="w-4 h-4" />
+        };
+      case 'warning':
+        return {
+          bgColor: darkMode 
+            ? 'bg-amber-950/15 border-amber-500/20 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.05)]' 
+            : 'bg-amber-50/75 border-amber-200 text-amber-900',
+          badgeBg: 'bg-amber-500 text-neutral-900',
+          icon: <Megaphone className="w-4 h-4 animate-bounce" />
+        };
+      case 'error':
+        return {
+          bgColor: darkMode 
+            ? 'bg-red-950/15 border-red-500/20 text-red-300 shadow-[0_0_15px_rgba(239,68,68,0.05)]' 
+            : 'bg-red-50/75 border-red-200 text-red-900',
+          badgeBg: 'bg-red-600',
+          icon: <Megaphone className="w-4 h-4 animate-pulse" />
+        };
+      case 'discord':
+        return {
+          bgColor: darkMode 
+            ? 'bg-[#5865F2]/10 border-[#5865F2]/30 text-[#8ea1ff] shadow-[0_0_15px_rgba(88,101,242,0.08)]' 
+            : 'bg-[#5865F2]/5 border-[#5865F2]/20 text-[#2c3e50]',
+          badgeBg: 'bg-[#5865F2]',
+          icon: <MessageSquare className="w-4 h-4 fill-white text-white" />
+        };
+      case 'info':
+      default:
+        return {
+          bgColor: darkMode 
+            ? 'bg-violet-950/15 border-violet-500/20 text-violet-300 shadow-[0_0_15px_rgba(139,92,246,0.05)]' 
+            : 'bg-violet-50/75 border-violet-200 text-violet-900',
+          badgeBg: 'bg-violet-600',
+          icon: <Megaphone className="w-4 h-4" />
+        };
+    }
+  };
+
   return (
     <div className={`min-h-screen w-full font-sans transition-colors duration-500 pb-12 ${
       darkMode 
@@ -384,41 +601,81 @@ export default function App() {
             setDarkMode={setDarkMode} 
             activeStatusText={activeStatusText}
             onOpenAdmin={() => setIsAdminOpen(true)}
+            visitCount={visitCount}
           />
         )}
 
-        {/* Active Announcement Banner with Inline CSS Animation */}
-        {activeAnnouncement && !selectedCategoryId && (
-          <>
-            <style>{`
-              @keyframes announcement-scroll {
-                0% { transform: translateX(100%); }
-                100% { transform: translateX(-100%); }
-              }
-              .scroll-text-track {
-                animation: announcement-scroll 25s linear infinite;
-              }
-              .scroll-text-track:hover {
-                animation-play-state: paused;
-              }
-            `}</style>
-            <div className={`w-full overflow-hidden relative py-3 px-4 rounded-2xl border transition-all duration-300 flex items-center gap-3.5 ${
-              darkMode
-                ? 'bg-red-950/10 border-red-500/20 text-red-300 shadow-[0_0_15px_rgba(239,68,68,0.05)]'
-                : 'bg-red-50/60 border-red-200 text-red-900'
-            }`}>
-              <div className={`p-1.5 rounded-lg bg-red-600 text-white animate-pulse shrink-0 flex items-center justify-center`}>
-                <Megaphone className="w-4 h-4" />
+        {/* Active Announcement Carousel */}
+        {activeAnnouncements.length > 0 && !selectedCategoryId && (
+          <div
+            onMouseEnter={() => setIsAnnHovered(true)}
+            onMouseLeave={() => setIsAnnHovered(false)}
+            className={`w-full relative py-3 px-4 rounded-2xl border transition-all duration-300 flex items-center justify-between gap-3.5 group/ann ${
+              getAnnouncementStyles(activeAnn.type).bgColor
+            } ${activeAnn.link ? 'cursor-pointer hover:scale-[1.005] hover:shadow-md active:scale-[0.995]' : ''}`}
+            onClick={() => handleAnnouncementClick(activeAnn)}
+            title={activeAnn.link ? 'Bağlantıyı açmak için tıklayın' : undefined}
+          >
+            <div className="flex items-center gap-3.5 flex-1 min-w-0">
+              <div className={`p-1.5 rounded-lg text-white shrink-0 flex items-center justify-center shadow-sm ${
+                getAnnouncementStyles(activeAnn.type).badgeBg
+              }`}>
+                {getAnnouncementStyles(activeAnn.type).icon}
               </div>
               
-              {/* Marquee Container */}
-              <div className="flex-1 overflow-hidden relative w-full h-5 flex items-center select-none font-sans font-bold text-xs">
-                <div className="absolute whitespace-nowrap scroll-text-track pl-4 cursor-pointer">
-                  {activeAnnouncement}
-                </div>
+              <div className="flex-1 min-w-0 flex flex-col text-left">
+                <span className="font-bold text-xs leading-relaxed tracking-wide truncate sm:whitespace-normal">
+                  {activeAnn.text}
+                </span>
+                {activeAnn.link && (
+                  <span className="text-[9px] opacity-70 font-semibold flex items-center gap-1 mt-0.5 animate-pulse">
+                    <ExternalLink className="w-2.5 h-2.5" /> Gitmek için tıklayın
+                  </span>
+                )}
               </div>
             </div>
-          </>
+
+            {/* Carousel navigation controls */}
+            {activeAnnouncements.length > 1 && (
+              <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation(); // prevent triggering the link click
+                    setCurrentAnnIndex((prev) => (prev - 1 + activeAnnouncements.length) % activeAnnouncements.length);
+                  }}
+                  className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
+                    darkMode 
+                      ? 'bg-neutral-900/60 hover:bg-neutral-800 text-neutral-400 hover:text-white border border-neutral-800/80' 
+                      : 'bg-white/80 hover:bg-white text-neutral-600 hover:text-neutral-950 border border-neutral-200'
+                  }`}
+                  title="Önceki Duyuru"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+
+                <span className="text-[10px] font-mono font-bold select-none opacity-60 min-w-[28px] text-center">
+                  {currentAnnIndex + 1}/{activeAnnouncements.length}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation(); // prevent triggering the link click
+                    setCurrentAnnIndex((prev) => (prev + 1) % activeAnnouncements.length);
+                  }}
+                  className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
+                    darkMode 
+                      ? 'bg-neutral-900/60 hover:bg-neutral-800 text-neutral-400 hover:text-white border border-neutral-800/80' 
+                      : 'bg-white/80 hover:bg-white text-neutral-600 hover:text-neutral-950 border border-neutral-200'
+                  }`}
+                  title="Sonraki Duyuru"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         {selectedCategoryId ? (
@@ -586,6 +843,8 @@ export default function App() {
         creatorPortrait={creatorPortrait}
         setCreatorPortrait={setCreatorPortrait}
         autoSaveStatus={autoSaveStatus}
+        visitCount={visitCount}
+        setVisitCount={setVisitCount}
       />
 
     </div>

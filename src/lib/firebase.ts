@@ -8,7 +8,9 @@ import {
   setDoc, 
   getDoc, 
   deleteDoc,
-  onSnapshot 
+  onSnapshot,
+  increment,
+  updateDoc
 } from 'firebase/firestore';
 import { Category, EffectItem } from '../types';
 
@@ -252,6 +254,7 @@ export interface Announcement {
   active: boolean;
   type: 'info' | 'warning' | 'success' | 'error' | 'discord';
   createdAt: string;
+  link?: string;
 }
 
 export const subscribeToAnnouncements = (callback: (announcements: Announcement[]) => void) => {
@@ -295,6 +298,59 @@ export const deleteAnnouncementFromFirebase = async (id: string): Promise<void> 
     await deleteDoc(docRef);
   } catch (error) {
     console.error("Error deleting announcement from Firebase:", error);
+    throw error;
+  }
+};
+
+// --- Realtime Visitor Count ---
+export const subscribeToVisitorCount = (callback: (count: number) => void) => {
+  if (!isFirebaseConfigured()) return () => {};
+  try {
+    const dbInstance = getFirebaseDB();
+    const docRef = doc(dbInstance, 'stats', 'visitors');
+    return onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        callback(data.count || 1474);
+      } else {
+        callback(1474);
+      }
+    }, (error) => {
+      console.error("Realtime subscription error (visitor count):", error);
+    });
+  } catch (e) {
+    console.error("Error starting realtime visitor subscription:", e);
+    return () => {};
+  }
+};
+
+export const incrementVisitorCount = async (): Promise<void> => {
+  if (!isFirebaseConfigured()) return;
+  try {
+    const dbInstance = getFirebaseDB();
+    const docRef = doc(dbInstance, 'stats', 'visitors');
+    
+    // Check if document exists first to avoid updateDoc failure on uninitialized document
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) {
+      // Initialize with 1474
+      await setDoc(docRef, { count: 1474 });
+    } else {
+      await updateDoc(docRef, { count: increment(1) });
+    }
+  } catch (error) {
+    console.error("Error incrementing visitor count in Firebase:", error);
+  }
+};
+
+export const setVisitorCountInFirebase = async (count: number): Promise<void> => {
+  if (!isFirebaseConfigured()) return;
+  try {
+    const dbInstance = getFirebaseDB();
+    const docRef = doc(dbInstance, 'stats', 'visitors');
+    await setDoc(docRef, { count: count });
+  } catch (error) {
+    console.error("Error setting visitor count in Firebase:", error);
     throw error;
   }
 };

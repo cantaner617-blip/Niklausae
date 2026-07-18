@@ -7,36 +7,10 @@ interface HeaderProps {
   setDarkMode: (dark: boolean) => void;
   activeStatusText: string;
   onOpenAdmin: () => void;
+  visitCount: number;
 }
 
-export default function Header({ darkMode, setDarkMode, activeStatusText, onOpenAdmin }: HeaderProps) {
-  const [visitCount, setVisitCount] = useState<number>(1474);
-
-  useEffect(() => {
-    // Load visit count from localStorage, initialize if not exists
-    const stored = localStorage.getItem('pars_mazi_visits');
-    if (stored) {
-      const parsed = parseInt(stored, 10);
-      // Increment visit by 1 on initial load
-      const next = parsed + 1;
-      setVisitCount(next);
-      localStorage.setItem('pars_mazi_visits', next.toString());
-    } else {
-      localStorage.setItem('pars_mazi_visits', '1474');
-    }
-
-    // Periodically simulate new visitor clicks to make the site feel alive
-    const interval = setInterval(() => {
-      setVisitCount(prev => {
-        const next = prev + (Math.random() > 0.7 ? 1 : 0);
-        localStorage.setItem('pars_mazi_visits', next.toString());
-        return next;
-      });
-    }, 15000);
-
-    return () => clearInterval(interval);
-  }, []);
-
+export default function Header({ darkMode, setDarkMode, activeStatusText, onOpenAdmin, visitCount }: HeaderProps) {
   return (
     <header className="w-full flex flex-col gap-4">
       {/* Top Bar with theme and visits */}
