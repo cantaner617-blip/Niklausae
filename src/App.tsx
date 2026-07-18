@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Categories from './components/Categories';
@@ -17,7 +17,8 @@ import {
   subscribeToGeneralSettings, 
   subscribeToCategories, 
   subscribeToEffects, 
-  subscribeToAnnouncements 
+  subscribeToAnnouncements,
+  saveGeneralSettings
 } from './lib/firebase';
 
 export default function App() {
@@ -133,12 +134,18 @@ export default function App() {
   // Dynamic active announcement
   const [activeAnnouncement, setActiveAnnouncement] = useState<string | null>(null);
 
+  // Auto-Save state & refs to prevent infinite loop or saving on mount
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const isIncomingFirebaseUpdate = useRef(false);
+  const firstLoad = useRef(true);
+
   // Live Firebase Subscriptions
   useEffect(() => {
     if (!isFirebaseConfigured()) return;
 
     // Subscribe to General Settings
     const unsubSettings = subscribeToGeneralSettings((settings) => {
+      isIncomingFirebaseUpdate.current = true;
       if (settings.siteTitle) setSiteTitle(settings.siteTitle);
       if (settings.siteSubtitle) setSiteSubtitle(settings.siteSubtitle);
       if (settings.siteBadge) setSiteBadge(settings.siteBadge);
@@ -153,6 +160,15 @@ export default function App() {
       if (settings.creatorDiscord) setCreatorDiscord(settings.creatorDiscord);
       if (settings.creatorTiktok) setCreatorTiktok(settings.creatorTiktok);
       if (settings.creatorPortrait !== undefined) setCreatorPortrait(settings.creatorPortrait || '');
+      
+      // Let React batch the state updates and finish rendering before resetting ref
+      setTimeout(() => {
+        isIncomingFirebaseUpdate.current = false;
+        // On very first load from Firebase, prevent trigger
+        if (firstLoad.current) {
+          firstLoad.current = false;
+        }
+      }, 300);
     });
 
     // Subscribe to Categories
@@ -175,6 +191,74 @@ export default function App() {
       unsubEffects();
     };
   }, []);
+
+  // AUTOMATIC BULUT SAVING EFFECT FOR GENERAL SETTINGS
+  useEffect(() => {
+    if (!isFirebaseConfigured()) return;
+    
+    // Guard 1: Skip if this was triggered by an incoming Firebase snapshot subscription
+    if (isIncomingFirebaseUpdate.current) return;
+    
+    // Guard 2: Skip on initial component mount to prevent overwriting Firebase with default/stale local state
+    if (firstLoad.current) {
+      firstLoad.current = false;
+      return;
+    }
+
+    // Guard 3: Only save if the Administrator actually has the panel open (they are editing)
+    if (!isAdminOpen) return;
+
+    // Set saving status in UI
+    setAutoSaveStatus('saving');
+
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        await saveGeneralSettings({
+          siteTitle,
+          siteSubtitle,
+          siteBadge,
+          activeStatusTextState,
+          discordUrl,
+          creatorName,
+          creatorTitle,
+          creatorBio,
+          creatorExperience,
+          creatorYoutube,
+          creatorInstagram,
+          creatorDiscord,
+          creatorTiktok,
+          creatorPortrait
+        });
+        setAutoSaveStatus('saved');
+        
+        // Return to idle after a visual confirmation delay
+        setTimeout(() => {
+          setAutoSaveStatus((current) => current === 'saved' ? 'idle' : current);
+        }, 3000);
+      } catch (e) {
+        console.error("Auto-save to Firebase failed:", e);
+        setAutoSaveStatus('error');
+      }
+    }, 1200); // 1.2s debounce to avoid spamming the database while typing
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [
+    siteTitle,
+    siteSubtitle,
+    siteBadge,
+    activeStatusTextState,
+    discordUrl,
+    creatorName,
+    creatorTitle,
+    creatorBio,
+    creatorExperience,
+    creatorYoutube,
+    creatorInstagram,
+    creatorDiscord,
+    creatorTiktok,
+    creatorPortrait,
+    isAdminOpen
+  ]);
 
   useEffect(() => {
     if (!isFirebaseConfigured()) {
@@ -501,6 +585,7 @@ export default function App() {
         setCreatorTiktok={setCreatorTiktok}
         creatorPortrait={creatorPortrait}
         setCreatorPortrait={setCreatorPortrait}
+        autoSaveStatus={autoSaveStatus}
       />
 
     </div>

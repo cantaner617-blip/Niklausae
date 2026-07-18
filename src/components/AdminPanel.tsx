@@ -50,6 +50,7 @@ interface AdminPanelProps {
   setCreatorTiktok: (url: string) => void;
   creatorPortrait: string;
   setCreatorPortrait: (url: string) => void;
+  autoSaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
 }
 
 interface Announcement {
@@ -96,6 +97,7 @@ export default function AdminPanel({
   setCreatorTiktok,
   creatorPortrait,
   setCreatorPortrait,
+  autoSaveStatus = 'idle',
 }: AdminPanelProps) {
   // Authentication State
   const [password, setPassword] = useState('');
@@ -108,7 +110,8 @@ export default function AdminPanel({
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
 
   // Active Navigation Tab
-  const [activeTab, setActiveTab] = useState<'settings' | 'announcements' | 'categories' | 'effects' | 'export_code' | 'creator_profile'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'announcements' | 'categories' | 'effects'>('settings');
+  const [settingsSubTab, setSettingsSubTab] = useState<'site' | 'profile' | 'social'>('site');
 
   // Announcements State
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -629,7 +632,28 @@ export default function AdminPanel({
               <LucideIcons.Settings className="w-5 h-5 animate-spin-slow" />
             </div>
             <div>
-              <h2 className="text-lg font-black tracking-tight uppercase font-mono">PARS MAZI KONTROL PANELİ</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-black tracking-tight uppercase font-mono">PARS MAZI KONTROL PANELİ</h2>
+                {isFirebaseConfigured() && (
+                  <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider font-mono border ${
+                    autoSaveStatus === 'saving' ? 'bg-amber-500/10 border-amber-500/25 text-amber-400 animate-pulse' :
+                    autoSaveStatus === 'saved' ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400' :
+                    autoSaveStatus === 'error' ? 'bg-red-500/10 border-red-500/25 text-red-400' :
+                    'bg-[#15151b] border-neutral-800 text-neutral-400'
+                  }`}>
+                    <div className={`w-1 h-1 rounded-full ${
+                      autoSaveStatus === 'saving' ? 'bg-amber-400' :
+                      autoSaveStatus === 'saved' ? 'bg-emerald-400' :
+                      autoSaveStatus === 'error' ? 'bg-red-400' :
+                      'bg-neutral-500'
+                    }`} />
+                    {autoSaveStatus === 'saving' ? 'Kaydediliyor...' :
+                     autoSaveStatus === 'saved' ? 'Bulutla Eşitlendi' :
+                     autoSaveStatus === 'error' ? 'Hata!' :
+                     'Otomatik Kaydetme'}
+                  </div>
+                )}
+              </div>
               <p className="text-[10px] text-neutral-500 font-bold uppercase font-mono">YÖNETİM & DÜZENLEME SİSTEMİ</p>
             </div>
           </div>
@@ -684,11 +708,9 @@ export default function AdminPanel({
             }`}>
               {[
                 { id: 'settings', label: 'GENEL AYARLAR', icon: 'Sliders' },
-                { id: 'creator_profile', label: 'CREATIVE PROFİL', icon: 'User' },
                 { id: 'announcements', label: 'DUYURU SİSTEMİ', icon: 'Megaphone' },
                 { id: 'categories', label: 'KATEGORİLER', icon: 'Layout' },
                 { id: 'effects', label: 'EFEKT KÜTÜPHANESİ', icon: 'Layers' },
-                { id: 'export_code', label: 'PROJEYİ YAYINLA / DIŞA AKTAR', icon: 'Download' },
               ].map((tab) => {
                 const IconComp = (LucideIcons as any)[tab.icon] || LucideIcons.File;
                 const isActive = activeTab === tab.id;
@@ -728,8 +750,8 @@ export default function AdminPanel({
               {activeTab === 'settings' && (
                 <div className="flex flex-col gap-6 animate-fade-in">
                   <div className="flex flex-col leading-tight border-b border-neutral-800/40 pb-3">
-                    <h3 className="text-base font-black uppercase tracking-tight">Genel Site Düzenlemeleri</h3>
-                    <p className="text-[11px] text-neutral-500 mt-0.5">Sitedeki ana metinleri, başlıkları ve sosyal linkleri anında güncelleyin.</p>
+                    <h3 className="text-base font-black uppercase tracking-tight">Genel Site & Profil Düzenlemeleri</h3>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">Sitedeki ana metinleri, başlıkları, yaratıcı profil detaylarını ve sosyal medya hesaplarını tek bir yerden yönetin.</p>
                   </div>
 
                   {/* FIREBASE CONFIGURATION & SEEDING BOX */}
@@ -746,10 +768,34 @@ export default function AdminPanel({
                         <button
                           type="button"
                           onClick={handleSaveGeneralSettingsToCloud}
-                          className="py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg uppercase tracking-wider active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                          className={`py-2 px-4 text-white text-[10px] font-black rounded-lg uppercase tracking-wider active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 ${
+                            autoSaveStatus === 'saving' ? 'bg-amber-600 hover:bg-amber-700 animate-pulse' :
+                            autoSaveStatus === 'saved' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                            autoSaveStatus === 'error' ? 'bg-red-600 hover:bg-red-700' :
+                            'bg-violet-600 hover:bg-violet-700'
+                          }`}
                         >
-                          <LucideIcons.CloudUpload className="w-3.5 h-3.5" />
-                          AYARLARI BULUTA KAYDET
+                          {autoSaveStatus === 'saving' ? (
+                            <>
+                              <LucideIcons.Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              OTOMATİK KAYDEDİLİYOR...
+                            </>
+                          ) : autoSaveStatus === 'saved' ? (
+                            <>
+                              <LucideIcons.Check className="w-3.5 h-3.5" />
+                              BULUTA KAYDEDİLDİ ✔
+                            </>
+                          ) : autoSaveStatus === 'error' ? (
+                            <>
+                              <LucideIcons.AlertCircle className="w-3.5 h-3.5" />
+                              KAYDETME BAŞARISIZ! TEKRAR DENE
+                            </>
+                          ) : (
+                            <>
+                              <LucideIcons.CloudUpload className="w-3.5 h-3.5" />
+                              BULUTLA EŞİTLENDİ (OTOMATİK)
+                            </>
+                          )}
                         </button>
                         <button
                           type="button"
@@ -786,291 +832,339 @@ export default function AdminPanel({
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-black uppercase text-neutral-500">ANA BAŞLIK (ÖRN: PARS MAZI)</label>
-                      <input
-                        type="text"
-                        value={siteTitle}
-                        onChange={(e) => setSiteTitle(e.target.value)}
-                        className={`py-3 px-4 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                          darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-800'
-                        }`}
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-black uppercase text-neutral-500">ALT BAŞLIK (ÖRN: EDIT PACK)</label>
-                      <input
-                        type="text"
-                        value={siteSubtitle}
-                        onChange={(e) => setSiteSubtitle(e.target.value)}
-                        className={`py-3 px-4 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                          darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-800'
-                        }`}
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-black uppercase text-neutral-500">KÜÇÜK ROZET ETİKETİ</label>
-                      <input
-                        type="text"
-                        value={siteBadge}
-                        onChange={(e) => setSiteBadge(e.target.value)}
-                        className={`py-3 px-4 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                          darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-800'
-                        }`}
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-black uppercase text-neutral-500">AKTİF ZİYARETÇİ METNİ</label>
-                      <input
-                        type="text"
-                        value={activeStatusText}
-                        onChange={(e) => setActiveStatusText(e.target.value)}
-                        className={`py-3 px-4 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                          darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-800'
-                        }`}
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-1.5 sm:col-span-2">
-                      <label className="text-[10px] font-black uppercase text-neutral-500">DISCORD SUNUCU KATILIM LİNKİ</label>
-                      <input
-                        type="text"
-                        value={discordUrl}
-                        onChange={(e) => setDiscordUrl(e.target.value)}
-                        className={`py-3 px-4 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                          darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-800'
-                        }`}
-                      />
-                    </div>
+                  {/* SUB-TABS SELECTOR FOR LOGICAL SECTIONS */}
+                  <div className="flex border-b border-neutral-800/10 gap-1 pb-1">
+                    <button
+                      type="button"
+                      onClick={() => setSettingsSubTab('site')}
+                      className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black tracking-tight transition-all cursor-pointer ${
+                        settingsSubTab === 'site'
+                          ? 'bg-violet-600/10 text-violet-500 border border-violet-500/20'
+                          : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
+                      }`}
+                    >
+                      <LucideIcons.Globe className="w-4 h-4" />
+                      SİTE AYARLARI
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettingsSubTab('profile')}
+                      className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black tracking-tight transition-all cursor-pointer ${
+                        settingsSubTab === 'profile'
+                          ? 'bg-violet-600/10 text-violet-500 border border-violet-500/20'
+                          : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
+                      }`}
+                    >
+                      <LucideIcons.User className="w-4 h-4" />
+                      YARATICI PROFİLİ
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettingsSubTab('social')}
+                      className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black tracking-tight transition-all cursor-pointer ${
+                        settingsSubTab === 'social'
+                          ? 'bg-violet-600/10 text-violet-500 border border-violet-500/20'
+                          : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
+                      }`}
+                    >
+                      <LucideIcons.Share2 className="w-4 h-4" />
+                      SOSYAL LİNKLER
+                    </button>
                   </div>
 
+                  {/* SUB-TAB 1: SITE SETTINGS */}
+                  {settingsSubTab === 'site' && (
+                    <div className="flex flex-col gap-5 animate-fade-in">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-black uppercase text-neutral-500">ANA BAŞLIK (ÖRN: PARS MAZI)</label>
+                          <input
+                            type="text"
+                            value={siteTitle}
+                            onChange={(e) => setSiteTitle(e.target.value)}
+                            className={`py-3 px-4 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                              darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-800'
+                            }`}
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-black uppercase text-neutral-500">ALT BAŞLIK (ÖRN: EDIT PACK)</label>
+                          <input
+                            type="text"
+                            value={siteSubtitle}
+                            onChange={(e) => setSiteSubtitle(e.target.value)}
+                            className={`py-3 px-4 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                              darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-800'
+                            }`}
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-black uppercase text-neutral-500">KÜÇÜK ROZET ETİKETİ</label>
+                          <input
+                            type="text"
+                            value={siteBadge}
+                            onChange={(e) => setSiteBadge(e.target.value)}
+                            className={`py-3 px-4 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                              darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-800'
+                            }`}
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-black uppercase text-neutral-500">AKTİF ZİYARETÇİ METNİ</label>
+                          <input
+                            type="text"
+                            value={activeStatusText}
+                            onChange={(e) => setActiveStatusText(e.target.value)}
+                            className={`py-3 px-4 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                              darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-800'
+                            }`}
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-1.5 sm:col-span-2">
+                          <label className="text-[10px] font-black uppercase text-neutral-500">DISCORD SUNUCU KATILIM LİNKİ</label>
+                          <input
+                            type="text"
+                            value={discordUrl}
+                            onChange={(e) => setDiscordUrl(e.target.value)}
+                            className={`py-3 px-4 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                              darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-800'
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Şifre Değiştirme Bölümü */}
+                      <div className={`p-5 rounded-2xl border flex flex-col gap-4 ${
+                        darkMode ? 'bg-[#101012] border-neutral-800/80' : 'bg-neutral-50 border-neutral-200'
+                      }`}>
+                        <div className="flex items-center gap-2 border-b border-neutral-800/40 pb-2">
+                          <LucideIcons.Key className="w-4.5 h-4.5 text-violet-500" />
+                          <h4 className="text-xs font-black uppercase tracking-tight">Panel Şifresini Değiştir</h4>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3 items-end">
+                          <div className="flex-1 flex flex-col gap-1.5 w-full">
+                            <label className="text-[10px] font-black uppercase text-neutral-500">YENİ YÖNETİCİ ŞİFRESİ</label>
+                            <input
+                              type="text"
+                              placeholder="Yeni şifrenizi yazın..."
+                              value={newPasswordInput}
+                              onChange={(e) => setNewPasswordInput(e.target.value)}
+                              className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                                darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                              }`}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!newPasswordInput.trim()) return;
+                              localStorage.setItem('pars_mazi_admin_password', newPasswordInput.trim());
+                              setAdminPassword(newPasswordInput.trim());
+                              setPasswordChangeSuccess('Şifre başarıyla güncellendi: ' + newPasswordInput.trim());
+                              setNewPasswordInput('');
+                              setTimeout(() => setPasswordChangeSuccess(''), 4000);
+                            }}
+                            className="py-3 px-5 bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-black rounded-xl uppercase tracking-wider active:scale-95 transition-all cursor-pointer whitespace-nowrap w-full sm:w-auto"
+                          >
+                            ŞİFREYİ GÜNCELLE
+                          </button>
+                        </div>
+                        {passwordChangeSuccess && (
+                          <p className="text-[11px] text-emerald-500 font-bold">{passwordChangeSuccess}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SUB-TAB 2: CREATOR PROFILE */}
+                  {settingsSubTab === 'profile' && (
+                    <div className="flex flex-col gap-5 animate-fade-in">
+                      <div className={`p-5 rounded-2xl border flex flex-col gap-5 ${
+                        darkMode ? 'bg-[#101012] border-neutral-800/80' : 'bg-neutral-50 border-neutral-200'
+                      }`}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {/* Creator Name */}
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-black uppercase text-neutral-500">YARATICI ADI / MAHLASI</label>
+                            <input
+                              type="text"
+                              value={creatorName}
+                              onChange={(e) => setCreatorName(e.target.value)}
+                              placeholder="Örn: NIKLAUSAE"
+                              className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                                darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                              }`}
+                            />
+                          </div>
+
+                          {/* Creator Title */}
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-black uppercase text-neutral-500">UNVAN / ALANLAR</label>
+                            <input
+                              type="text"
+                              value={creatorTitle}
+                              onChange={(e) => setCreatorTitle(e.target.value)}
+                              placeholder="Örn: VIDEO EDITOR • MOTION DESIGNER"
+                              className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                                darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                              }`}
+                            />
+                          </div>
+
+                          {/* Creator Experience */}
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-black uppercase text-neutral-500">YILLIK DENEYİM DEĞERİ</label>
+                            <input
+                              type="text"
+                              value={creatorExperience}
+                              onChange={(e) => setCreatorExperience(e.target.value)}
+                              placeholder="Örn: 6+ veya 10+"
+                              className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                                darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                              }`}
+                            />
+                          </div>
+
+                          {/* Creator Portrait Image URL */}
+                          <div className="flex flex-col gap-1.5 sm:col-span-2">
+                            <label className="text-[10px] font-black uppercase text-neutral-500">PROFİL RESMİ URL (FOTOĞRAFI)</label>
+                            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full">
+                              <input
+                                type="text"
+                                value={creatorPortrait}
+                                onChange={(e) => setCreatorPortrait(e.target.value)}
+                                placeholder="Resim URL'si girin veya boş bırakın..."
+                                className={`flex-1 py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 w-full ${
+                                  darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                                }`}
+                              />
+                              <div className="flex items-center gap-2">
+                                <div className={`w-12 h-12 rounded-xl overflow-hidden border shrink-0 bg-neutral-900 ${
+                                  darkMode ? 'border-neutral-800' : 'border-neutral-200'
+                                }`}>
+                                  {creatorPortrait ? (
+                                    <img
+                                      src={creatorPortrait}
+                                      alt="Önizleme"
+                                      referrerPolicy="no-referrer"
+                                      className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-300"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80';
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-[9px] text-neutral-500 font-bold font-mono text-center leading-none p-1 bg-neutral-950">
+                                      VARSAYILAN
+                                    </div>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-neutral-500 font-bold uppercase font-mono">ÖNİZLEME</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Creator Bio */}
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-black uppercase text-neutral-500">KENDİNİZİ TANITIN (BİYOGRAFİ METNİ)</label>
+                          <textarea
+                            value={creatorBio}
+                            onChange={(e) => setCreatorBio(e.target.value)}
+                            placeholder="Ziyaretçilere kendinizden ve yaptığınız işlerden bahsedin..."
+                            rows={5}
+                            className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                              darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                            }`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SUB-TAB 3: SOCIAL LINKS */}
+                  {settingsSubTab === 'social' && (
+                    <div className="flex flex-col gap-5 animate-fade-in">
+                      <div className={`p-5 rounded-2xl border flex flex-col gap-5 ${
+                        darkMode ? 'bg-[#101012] border-neutral-800/80' : 'bg-neutral-50 border-neutral-200'
+                      }`}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {/* Youtube link */}
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[9px] font-black uppercase text-neutral-500 flex items-center gap-1">
+                              <LucideIcons.Youtube className="w-3.5 h-3.5 text-red-500" /> YOUTUBE LİNKİ
+                            </label>
+                            <input
+                              type="text"
+                              value={creatorYoutube}
+                              onChange={(e) => setCreatorYoutube(e.target.value)}
+                              className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                                darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                              }`}
+                            />
+                          </div>
+
+                          {/* Instagram link */}
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[9px] font-black uppercase text-neutral-500 flex items-center gap-1">
+                              <LucideIcons.Instagram className="w-3.5 h-3.5 text-pink-500" /> INSTAGRAM LİNKİ
+                            </label>
+                            <input
+                              type="text"
+                              value={creatorInstagram}
+                              onChange={(e) => setCreatorInstagram(e.target.value)}
+                              className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                                darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                              }`}
+                            />
+                          </div>
+
+                          {/* Discord link */}
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[9px] font-black uppercase text-neutral-500 flex items-center gap-1">
+                              <LucideIcons.MessageSquare className="w-3.5 h-3.5 text-indigo-400" /> DISCORD SUNUCU DAVETİ
+                            </label>
+                            <input
+                              type="text"
+                              value={creatorDiscord}
+                              onChange={(e) => setCreatorDiscord(e.target.value)}
+                              className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                                darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                              }`}
+                            />
+                          </div>
+
+                          {/* Tiktok link */}
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[9px] font-black uppercase text-neutral-500 flex items-center gap-1">
+                              <LucideIcons.Play className="w-3.5 h-3.5 text-sky-400" /> TIKTOK PROFİL LİNKİ
+                            </label>
+                            <input
+                              type="text"
+                              value={creatorTiktok}
+                              onChange={(e) => setCreatorTiktok(e.target.value)}
+                              className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                                darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                              }`}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* General Tips & Storage Status Indicator */}
                   <div className={`p-4 rounded-2xl border flex items-center gap-3.5 ${
                     darkMode ? 'bg-violet-950/10 border-violet-800/25 text-violet-400' : 'bg-violet-50 border-violet-100 text-violet-700'
                   }`}>
                     <LucideIcons.Sparkles className="w-5 h-5 shrink-0" />
                     <p className="text-[11px] leading-relaxed">
-                      <b>İpucu:</b> Başlık ve ayarları değiştirdikten sonra sitenin ana sayfasında anında güncellendiğini göreceksiniz. Değişiklikler tarayıcı hafızasına (localStorage) otomatik kaydedilir.
+                      <b>İpucu:</b> Tüm değişiklikleriniz otomatik olarak bulut veritabanına veya yerel tarayıcı hafızasına (localStorage) kaydedilir. Sitedeki veriler anında güncellenir.
                     </p>
-                  </div>
-
-                  {/* Şifre Değiştirme Bölümü */}
-                  <div className={`p-5 rounded-2xl border flex flex-col gap-4 ${
-                    darkMode ? 'bg-[#101012] border-neutral-800/80' : 'bg-neutral-50 border-neutral-200'
-                  }`}>
-                    <div className="flex items-center gap-2 border-b border-neutral-800/40 pb-2">
-                      <LucideIcons.Key className="w-4.5 h-4.5 text-violet-500" />
-                      <h4 className="text-xs font-black uppercase tracking-tight">Panel Şifresini Değiştir</h4>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-3 items-end">
-                      <div className="flex-1 flex flex-col gap-1.5 w-full">
-                        <label className="text-[10px] font-black uppercase text-neutral-500">YENİ YÖNETİCİ ŞİFRESİ</label>
-                        <input
-                          type="text"
-                          placeholder="Yeni şifrenizi yazın..."
-                          value={newPasswordInput}
-                          onChange={(e) => setNewPasswordInput(e.target.value)}
-                          className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                            darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
-                          }`}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!newPasswordInput.trim()) return;
-                          localStorage.setItem('pars_mazi_admin_password', newPasswordInput.trim());
-                          setAdminPassword(newPasswordInput.trim());
-                          setPasswordChangeSuccess('Şifre başarıyla güncellendi: ' + newPasswordInput.trim());
-                          setNewPasswordInput('');
-                          setTimeout(() => setPasswordChangeSuccess(''), 4000);
-                        }}
-                        className="py-3 px-5 bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-black rounded-xl uppercase tracking-wider active:scale-95 transition-all cursor-pointer whitespace-nowrap w-full sm:w-auto"
-                      >
-                        ŞİFREYİ GÜNCELLE
-                      </button>
-                    </div>
-                    {passwordChangeSuccess && (
-                      <p className="text-[11px] text-emerald-500 font-bold">{passwordChangeSuccess}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* TAB: CREATIVE PROFILE (CREATOR PROFILE EDITING) */}
-              {activeTab === 'creator_profile' && (
-                <div className="flex flex-col gap-6 animate-fade-in">
-                  <div className="flex flex-col leading-tight border-b border-neutral-800/40 pb-3">
-                    <h3 className="text-base font-black uppercase tracking-tight">Creative Profil Düzenleme</h3>
-                    <p className="text-[11px] text-neutral-500 mt-0.5">Sitenin en altında bulunan yaratıcı profil / biyografi alanını özelleştirin.</p>
-                  </div>
-
-                  {/* Cloud status if configured */}
-                  {isFirebaseConfigured() && (
-                    <div className="p-3.5 bg-emerald-950/15 border border-emerald-800/25 rounded-xl text-emerald-400 flex items-center gap-2 text-xs">
-                      <LucideIcons.Cloud className="w-4 h-4 text-emerald-400 animate-pulse" />
-                      <span>Buradaki değişiklikler, üstteki <b>AYARLARI BULUTA KAYDET</b> butonuyla Firebase bulutuna da kaydedilebilir.</span>
-                    </div>
-                  )}
-
-                  <div className={`p-5 rounded-2xl border flex flex-col gap-5 ${
-                    darkMode ? 'bg-[#101012] border-neutral-800/80' : 'bg-neutral-50 border-neutral-200'
-                  }`}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Creator Name */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-black uppercase text-neutral-500">YARATICI ADI / MAHLASI</label>
-                        <input
-                          type="text"
-                          value={creatorName}
-                          onChange={(e) => setCreatorName(e.target.value)}
-                          placeholder="Örn: NIKLAUSAE"
-                          className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                            darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
-                          }`}
-                        />
-                      </div>
-
-                      {/* Creator Title */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-black uppercase text-neutral-500">UNVAN / ALANLAR</label>
-                        <input
-                          type="text"
-                          value={creatorTitle}
-                          onChange={(e) => setCreatorTitle(e.target.value)}
-                          placeholder="Örn: VIDEO EDITOR • MOTION DESIGNER"
-                          className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                            darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
-                          }`}
-                        />
-                      </div>
-
-                      {/* Creator Experience */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-black uppercase text-neutral-500">YILLIK DENEYİM DEĞERİ</label>
-                        <input
-                          type="text"
-                          value={creatorExperience}
-                          onChange={(e) => setCreatorExperience(e.target.value)}
-                          placeholder="Örn: 6+ veya 10+"
-                          className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                            darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
-                          }`}
-                        />
-                      </div>
-
-                      {/* Creator Portrait Image URL */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-black uppercase text-neutral-500">PROFİL RESMİ URL (BOŞ BIRAKILIRSA VARSAYILAN KULLANILIR)</label>
-                        <input
-                          type="text"
-                          value={creatorPortrait}
-                          onChange={(e) => setCreatorPortrait(e.target.value)}
-                          placeholder="Resim URL'si girin veya boş bırakın..."
-                          className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                            darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
-                          }`}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Creator Bio */}
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-black uppercase text-neutral-500">KENDİNİZİ TANITIN (BİYOGRAFİ METNİ)</label>
-                      <textarea
-                        value={creatorBio}
-                        onChange={(e) => setCreatorBio(e.target.value)}
-                        placeholder="Ziyaretçilere kendinizden ve yaptığınız işlerden bahsedin..."
-                        rows={5}
-                        className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                          darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
-                        }`}
-                      />
-                    </div>
-
-                    {/* SOCIAL LINKS SECTION */}
-                    <div className="border-t border-neutral-800/40 pt-4 mt-2">
-                      <span className="text-[10px] font-black uppercase text-neutral-400 block mb-3">SOSYAL MEDYA LİNKLERİ</span>
-                      
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {/* Youtube link */}
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-[9px] font-black uppercase text-neutral-500 flex items-center gap-1">
-                            <LucideIcons.Youtube className="w-3.5 h-3.5 text-red-500" /> YOUTUBE LİNKİ
-                          </label>
-                          <input
-                            type="text"
-                            value={creatorYoutube}
-                            onChange={(e) => setCreatorYoutube(e.target.value)}
-                            className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                              darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
-                            }`}
-                          />
-                        </div>
-
-                        {/* Instagram link */}
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-[9px] font-black uppercase text-neutral-500 flex items-center gap-1">
-                            <LucideIcons.Instagram className="w-3.5 h-3.5 text-pink-500" /> INSTAGRAM LİNKİ
-                          </label>
-                          <input
-                            type="text"
-                            value={creatorInstagram}
-                            onChange={(e) => setCreatorInstagram(e.target.value)}
-                            className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                              darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
-                            }`}
-                          />
-                        </div>
-
-                        {/* Discord link */}
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-[9px] font-black uppercase text-neutral-500 flex items-center gap-1">
-                            <LucideIcons.MessageSquare className="w-3.5 h-3.5 text-indigo-400" /> DISCORD SUNUCU DAVETİ
-                          </label>
-                          <input
-                            type="text"
-                            value={creatorDiscord}
-                            onChange={(e) => setCreatorDiscord(e.target.value)}
-                            className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                              darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
-                            }`}
-                          />
-                        </div>
-
-                        {/* Tiktok link */}
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-[9px] font-black uppercase text-neutral-500 flex items-center gap-1">
-                            <LucideIcons.Play className="w-3.5 h-3.5 text-sky-400" /> TIKTOK PROFİL LİNKİ
-                          </label>
-                          <input
-                            type="text"
-                            value={creatorTiktok}
-                            onChange={(e) => setCreatorTiktok(e.target.value)}
-                            className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                              darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
-                            }`}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Local save note */}
-                    <div className="flex justify-end gap-2 mt-2">
-                      {isFirebaseConfigured() && (
-                        <button
-                          type="button"
-                          onClick={handleSaveGeneralSettingsToCloud}
-                          className="py-2.5 px-5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black rounded-xl uppercase tracking-wider"
-                        >
-                          PROFİLİ BULUTA KAYDET
-                        </button>
-                      )}
-                    </div>
                   </div>
                 </div>
               )}
@@ -1651,275 +1745,6 @@ export default function AdminPanel({
                         );
                       })}
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 5: EXPORT/PUBLISH CODE FOR GITHUB PAGES */}
-              {activeTab === 'export_code' && (
-                <div className="flex flex-col gap-6 animate-fade-in">
-                  <div className="flex flex-col leading-tight border-b border-neutral-800/40 pb-3">
-                    <h3 className="text-base font-black uppercase tracking-tight">Projeyi GitHub Pages'te Güncelle</h3>
-                    <p className="text-[11px] text-neutral-500 mt-0.5">Sitede eklediğiniz tüm kategoriler ve presetler şu an tarayıcınızda kayıtlıdır. Bunları tüm ziyaretçiler için kalıcı kılmak için aşağıdaki adımları izleyin.</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className={`p-4 rounded-xl border flex flex-col gap-2 ${
-                      darkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-neutral-50 border-neutral-200'
-                    }`}>
-                      <div className="w-7 h-7 rounded-full bg-violet-500/10 text-violet-400 flex items-center justify-center font-bold text-xs">1</div>
-                      <h4 className="text-xs font-bold text-violet-400">Veriyi Kopyalayın veya İndirin</h4>
-                      <p className="text-[10.5px] text-neutral-500 leading-relaxed">
-                        Aşağıda otomatik oluşturulan veri kodunu kopyalayın veya doğrudan dosya olarak indirin.
-                      </p>
-                    </div>
-
-                    <div className={`p-4 rounded-xl border flex flex-col gap-2 ${
-                      darkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-neutral-50 border-neutral-200'
-                    }`}>
-                      <div className="w-7 h-7 rounded-full bg-violet-500/10 text-violet-400 flex items-center justify-center font-bold text-xs">2</div>
-                      <h4 className="text-xs font-bold text-violet-400">data.ts Dosyasını Güncelleyin</h4>
-                      <p className="text-[10.5px] text-neutral-500 leading-relaxed">
-                        Projenizin içindeki <code className="text-rose-400 font-mono">src/data.ts</code> dosyasını açıp tüm içeriğini silin ve bu kodları yapıştırın.
-                      </p>
-                    </div>
-
-                    <div className={`p-4 rounded-xl border flex flex-col gap-2 ${
-                      darkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-neutral-50 border-neutral-200'
-                    }`}>
-                      <div className="w-7 h-7 rounded-full bg-violet-500/10 text-violet-400 flex items-center justify-center font-bold text-xs">3</div>
-                      <h4 className="text-xs font-bold text-violet-400">GitHub'a Gönderin (Commit & Push)</h4>
-                      <p className="text-[10.5px] text-neutral-500 leading-relaxed">
-                        Değişikliği kaydedip GitHub'a yüklediğinizde, siteniz yeni kategoriler ve presetlerle anında tüm dünya için güncellenecektir!
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2.5">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black uppercase text-neutral-500 font-mono">OTOMATİK OLUŞTURULAN src/data.ts DOSYA İÇERİĞİ</span>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const code = (() => {
-                              const requiredPlugins = [
-                                {
-                                  name: 'Sapphire (S_)',
-                                  category: 'Sallantı, Parlama ve Geçişler',
-                                  description: 'After Effects video editörlerinin olmazsa olmazı ana efekt paketidir. S_Shake, S_Glow, S_Distort vb. yüzlerce gelişmiş efekt içerir.',
-                                  requirements: 'After Effects CC 2018 ve üzeri',
-                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                                  downloadUrl: '#',
-                                },
-                                {
-                                  name: 'Boris FX Continuum (BCC)',
-                                  category: 'Görsel Efektler ve Geçişler',
-                                  description: 'BCC Fast Lens Blur, BCC Chroma Bands ve 3D parçacık efektleri için kullanılır. Özellikle anime ve oyun editlerinde sıkça tercih edilir.',
-                                  requirements: 'After Effects CC 2020 ve üzeri',
-                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                                  downloadUrl: '#',
-                                },
-                                {
-                                  name: 'Magic Bullet Looks (Red Giant)',
-                                  category: 'Renk Derecelendirme (CC)',
-                                  description: 'Renk efektlerimizin (CC) büyük bir çoğunluğu bu plugini gerektirir. Sinematik ve doygun renk ayarları için profesyonel araçlar sunar.',
-                                  requirements: 'After Effects CC 2019 ve üzeri',
-                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                                  downloadUrl: '#',
-                                },
-                                {
-                                  name: 'Twixtor / Twixtor Pro',
-                                  category: 'Yavaş Çekim (Slow-motion)',
-                                  description: 'Videolarınızı kare atlamadan, yapay zeka desteğiyle pürüzsüzce yavaşlatmanızı sağlar. Anime ve spor editleri için kritik öneme sahiptir.',
-                                  requirements: 'After Effects CC 2015 ve üzeri',
-                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                                  downloadUrl: '#',
-                                },
-                                {
-                                  name: 'Deep Glow',
-                                  category: 'Gerçekçi Parlama Efekti',
-                                  description: 'After Effects\'in varsayılan glow efektinden kat kat daha gerçekçi, fiziksel tabanlı bir light flare üretir.',
-                                  requirements: 'After Effects CC 2017 ve üzeri',
-                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                                  downloadUrl: '#',
-                                },
-                                {
-                                  name: 'RSMB (ReelSmart Motion Blur)',
-                                  category: 'Hareket Bulanıklığı',
-                                  description: 'Hızlı hareket eden nesnelere otomatik olarak gerçekçi kamera hareket bulanıklığı ekler, geçişlerin ve shake\'lerin daha akıcı görünmesini sağlar.',
-                                  requirements: 'After Effects CC 2018 ve üzeri',
-                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                                  downloadUrl: '#',
-                                },
-                              ];
-                              return `import { Category, EffectItem, RequiredPlugin } from './types';
-
-export const CATEGORIES: Category[] = ${JSON.stringify(categories, null, 2)};
-
-export const REQUIRED_PLUGINS: RequiredPlugin[] = ${JSON.stringify(requiredPlugins, null, 2)};
-
-export const EFFECT_ITEMS: EffectItem[] = ${JSON.stringify(effects, null, 2)};
-`;
-                            })();
-                            
-                            navigator.clipboard.writeText(code);
-                            alert('Kod başarıyla panoya kopyalandı! src/data.ts dosyasının içine yapıştırabilirsiniz.');
-                          }}
-                          className="py-2 px-3 bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-black rounded-lg uppercase tracking-wider active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
-                        >
-                          <LucideIcons.Copy className="w-3.5 h-3.5" />
-                          KODU KOPYALA
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const code = (() => {
-                              const requiredPlugins = [
-                                {
-                                  name: 'Sapphire (S_)',
-                                  category: 'Sallantı, Parlama ve Geçişler',
-                                  description: 'After Effects video editörlerinin olmazsa olmazı ana efekt paketidir. S_Shake, S_Glow, S_Distort vb. yüzlerce gelişmiş efekt içerir.',
-                                  requirements: 'After Effects CC 2018 ve üzeri',
-                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                                  downloadUrl: '#',
-                                },
-                                {
-                                  name: 'Boris FX Continuum (BCC)',
-                                  category: 'Görsel Efektler ve Geçişler',
-                                  description: 'BCC Fast Lens Blur, BCC Chroma Bands ve 3D parçacık efektleri için kullanılır. Özellikle anime ve oyun editlerinde sıkça tercih edilir.',
-                                  requirements: 'After Effects CC 2020 ve üzeri',
-                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                                  downloadUrl: '#',
-                                },
-                                {
-                                  name: 'Magic Bullet Looks (Red Giant)',
-                                  category: 'Renk Derecelendirme (CC)',
-                                  description: 'Renk efektlerimizin (CC) büyük bir çoğunluğu bu plugini gerektirir. Sinematik ve doygun renk ayarları için profesyonel araçlar sunar.',
-                                  requirements: 'After Effects CC 2019 ve üzeri',
-                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                                  downloadUrl: '#',
-                                },
-                                {
-                                  name: 'Twixtor / Twixtor Pro',
-                                  category: 'Yavaş Çekim (Slow-motion)',
-                                  description: 'Videolarınızı kare atlamadan, yapay zeka desteğiyle pürüzsüzce yavaşlatmanızı sağlar. Anime ve spor editleri için kritik öneme sahiptir.',
-                                  requirements: 'After Effects CC 2015 ve üzeri',
-                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                                  downloadUrl: '#',
-                                },
-                                {
-                                  name: 'Deep Glow',
-                                  category: 'Gerçekçi Parlama Efekti',
-                                  description: 'After Effects\'in varsayılan glow efektinden kat kat daha gerçekçi, fiziksel tabanlı bir light flare üretir.',
-                                  requirements: 'After Effects CC 2017 ve üzeri',
-                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                                  downloadUrl: '#',
-                                },
-                                {
-                                  name: 'RSMB (ReelSmart Motion Blur)',
-                                  category: 'Hareket Bulanıklığı',
-                                  description: 'Hızlı hareket eden nesnelere otomatik olarak gerçekçi kamera hareket bulanıklığı ekler, geçişlerin ve shake\'lerin daha akıcı görünmesini sağlar.',
-                                  requirements: 'After Effects CC 2018 ve üzeri',
-                                  videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                                  downloadUrl: '#',
-                                },
-                              ];
-                              return `import { Category, EffectItem, RequiredPlugin } from './types';
-
-export const CATEGORIES: Category[] = ${JSON.stringify(categories, null, 2)};
-
-export const REQUIRED_PLUGINS: RequiredPlugin[] = ${JSON.stringify(requiredPlugins, null, 2)};
-
-export const EFFECT_ITEMS: EffectItem[] = ${JSON.stringify(effects, null, 2)};
-`;
-                            })();
-                            
-                            const blob = new Blob([code], { type: 'text/typescript' });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = 'data.ts';
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                            URL.revokeObjectURL(url);
-                          }}
-                          className="py-2 px-3 bg-neutral-800 hover:bg-neutral-750 text-white text-[10px] font-black rounded-lg uppercase tracking-wider active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 border border-neutral-700/80"
-                        >
-                          <LucideIcons.Download className="w-3.5 h-3.5" />
-                          DOSYAYI İNDİR (DATA.TS)
-                        </button>
-                      </div>
-                    </div>
-
-                    <textarea
-                      readOnly
-                      value={(() => {
-                        const requiredPlugins = [
-                          {
-                            name: 'Sapphire (S_)',
-                            category: 'Sallantı, Parlama ve Geçişler',
-                            description: 'After Effects video editörlerinin olmazsa olmazı ana efekt paketidir. S_Shake, S_Glow, S_Distort vb. yüzlerce gelişmiş efekt içerir.',
-                            requirements: 'After Effects CC 2018 ve üzeri',
-                            videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                            downloadUrl: '#',
-                          },
-                          {
-                            name: 'Boris FX Continuum (BCC)',
-                            category: 'Görsel Efektler ve Geçişler',
-                            description: 'BCC Fast Lens Blur, BCC Chroma Bands ve 3D parçacık efektleri için kullanılır. Özellikle anime ve oyun editlerinde sıkça tercih edilir.',
-                            requirements: 'After Effects CC 2020 ve üzeri',
-                            videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                            downloadUrl: '#',
-                          },
-                          {
-                            name: 'Magic Bullet Looks (Red Giant)',
-                            category: 'Renk Derecelendirme (CC)',
-                            description: 'Renk efektlerimizin (CC) büyük bir çoğunluğu bu plugini gerektirir. Sinematik ve doygun renk ayarları için profesyonel araçlar sunar.',
-                            requirements: 'After Effects CC 2019 ve üzeri',
-                            videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                            downloadUrl: '#',
-                          },
-                          {
-                            name: 'Twixtor / Twixtor Pro',
-                            category: 'Yavaş Çekim (Slow-motion)',
-                            description: 'Videolarınızı kare atlamadan, yapay zeka desteğiyle pürüzsüzce yavaşlatmanızı sağlar. Anime ve spor editleri için kritik öneme sahiptir.',
-                            requirements: 'After Effects CC 2015 ve üzeri',
-                            videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                            downloadUrl: '#',
-                          },
-                          {
-                            name: 'Deep Glow',
-                            category: 'Gerçekçi Parlama Efekti',
-                            description: 'After Effects\'in varsayılan glow efektinden kat kat daha gerçekçi, fiziksel tabanlı bir light flare üretir.',
-                            requirements: 'After Effects CC 2017 ve üzeri',
-                            videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                            downloadUrl: '#',
-                          },
-                          {
-                            name: 'RSMB (ReelSmart Motion Blur)',
-                            category: 'Hareket Bulanıklığı',
-                            description: 'Hızlı hareket eden nesnelere otomatik olarak gerçekçi kamera hareket bulanıklığı ekler, geçişlerin ve shake\'lerin daha akıcı görünmesini sağlar.',
-                            requirements: 'After Effects CC 2018 ve üzeri',
-                            videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                            downloadUrl: '#',
-                          },
-                        ];
-                        return `import { Category, EffectItem, RequiredPlugin } from './types';
-
-export const CATEGORIES: Category[] = ${JSON.stringify(categories, null, 2)};
-
-export const REQUIRED_PLUGINS: RequiredPlugin[] = ${JSON.stringify(requiredPlugins, null, 2)};
-
-export const EFFECT_ITEMS: EffectItem[] = ${JSON.stringify(effects, null, 2)};
-`;
-                      })()}
-                      className={`w-full h-[220px] p-4 rounded-xl border text-[10.5px] font-mono leading-relaxed focus:outline-none focus:ring-1 focus:ring-violet-500 overflow-y-auto ${
-                        darkMode ? 'bg-neutral-950 border-neutral-850 text-neutral-400' : 'bg-neutral-50 border-neutral-200 text-neutral-600'
-                      }`}
-                    />
                   </div>
                 </div>
               )}
