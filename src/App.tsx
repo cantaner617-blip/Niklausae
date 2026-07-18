@@ -401,17 +401,17 @@ export default function App() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Real-time visitor tracking logic (prevents refresh spamming via sessionStorage)
+  // Real-time visitor tracking logic (prevents refresh spamming via localStorage)
   useEffect(() => {
-    const sessionActive = sessionStorage.getItem('pars_mazi_session_active');
-    const isNewSession = !sessionActive;
+    const visitorTracked = localStorage.getItem('pars_mazi_visitor_tracked');
+    const isNewVisitor = !visitorTracked;
     
-    if (isNewSession) {
-      sessionStorage.setItem('pars_mazi_session_active', 'true');
+    if (isNewVisitor) {
+      localStorage.setItem('pars_mazi_visitor_tracked', 'true');
     }
 
     if (isFirebaseConfigured()) {
-      if (isNewSession) {
+      if (isNewVisitor) {
         incrementVisitorCount();
       }
       
@@ -425,7 +425,7 @@ export default function App() {
       const stored = localStorage.getItem('pars_mazi_visits');
       let currentCount = stored ? parseInt(stored, 10) : 1474;
       
-      if (isNewSession) {
+      if (isNewVisitor) {
         currentCount += 1;
         localStorage.setItem('pars_mazi_visits', currentCount.toString());
       }

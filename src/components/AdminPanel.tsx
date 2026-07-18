@@ -963,9 +963,12 @@ export default function AdminPanel({
                             value={activeStatusText}
                             onChange={(e) => setActiveStatusText(e.target.value)}
                             className={`py-3 px-4 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                              darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-800'
+                              darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-[#f5f5f5] border-neutral-200 text-neutral-800'
                             }`}
                           />
+                          <span className="text-[10px] text-neutral-500 font-medium">
+                            Metin içindeki sayılar (örn: 2,845) otomatik olarak canlı ziyaretçi sayısı ile değiştirilecektir.
+                          </span>
                         </div>
 
                         <div className="flex flex-col gap-1.5">

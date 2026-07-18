@@ -11,6 +11,30 @@ interface HeaderProps {
 }
 
 export default function Header({ darkMode, setDarkMode, activeStatusText, onOpenAdmin, visitCount }: HeaderProps) {
+  const formattedStatusText = (() => {
+    const countStr = visitCount.toLocaleString('tr-TR');
+    
+    // 1. If it contains custom placeholders
+    if (activeStatusText.includes('%COUNT%')) {
+      return activeStatusText.replace(/%COUNT%/g, countStr);
+    }
+    if (activeStatusText.includes('{count}')) {
+      return activeStatusText.replace(/{count}/g, countStr);
+    }
+    if (activeStatusText.includes('{COUNT}')) {
+      return activeStatusText.replace(/{COUNT}/g, countStr);
+    }
+    
+    // 2. Otherwise, dynamically find any numbers and replace them with the actual visitor count
+    const numberRegex = /\b\d+([\.,\s]?\d+)*\b/;
+    if (numberRegex.test(activeStatusText)) {
+      return activeStatusText.replace(numberRegex, countStr);
+    }
+    
+    // 3. Fallback: prepend the count elegantly
+    return `${countStr} AKTİF EDİTÖR ÇEVRİMİÇİ`;
+  })();
+
   return (
     <header className="w-full flex flex-col gap-4">
       {/* Top Bar with theme and visits */}
@@ -102,7 +126,7 @@ export default function Header({ darkMode, setDarkMode, activeStatusText, onOpen
         <div className="flex items-center justify-center gap-3">
           <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-ping" />
           <span className="text-xs font-black tracking-[0.25em] uppercase text-center font-mono">
-            {activeStatusText}
+            {formattedStatusText}
           </span>
           <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-ping" />
         </div>
