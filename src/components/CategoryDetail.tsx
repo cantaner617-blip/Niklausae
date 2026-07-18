@@ -130,7 +130,7 @@ export default function CategoryDetail({
         <span className={`text-[11px] font-black tracking-[0.18em] uppercase font-mono text-center ${
           darkMode ? 'text-neutral-400' : 'text-neutral-600'
         }`}>
-          PARS MAZI EDIT PACK
+          NIKLAUSAE EDIT PACK
         </span>
 
         {/* Right side item count badge */}

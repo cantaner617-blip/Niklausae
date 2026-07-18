@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { Category, EffectItem } from '../types';
+import {
+  isFirebaseConfigured,
+  saveGeneralSettings,
+  saveCategoryToFirebase,
+  deleteCategoryFromFirebase,
+  saveEffectToFirebase,
+  deleteEffectFromFirebase,
+  saveAnnouncementToFirebase,
+  deleteAnnouncementFromFirebase,
+  subscribeToAnnouncements
+} from '../lib/firebase';
 
 interface AdminPanelProps {
   darkMode: boolean;
@@ -20,6 +31,25 @@ interface AdminPanelProps {
   setActiveStatusText: (text: string) => void;
   discordUrl: string;
   setDiscordUrl: (url: string) => void;
+  // Creator Profile props
+  creatorName: string;
+  setCreatorName: (name: string) => void;
+  creatorTitle: string;
+  setCreatorTitle: (title: string) => void;
+  creatorBio: string;
+  setCreatorBio: (bio: string) => void;
+  creatorExperience: string;
+  setCreatorExperience: (exp: string) => void;
+  creatorYoutube: string;
+  setCreatorYoutube: (url: string) => void;
+  creatorInstagram: string;
+  setCreatorInstagram: (url: string) => void;
+  creatorDiscord: string;
+  setCreatorDiscord: (url: string) => void;
+  creatorTiktok: string;
+  setCreatorTiktok: (url: string) => void;
+  creatorPortrait: string;
+  setCreatorPortrait: (url: string) => void;
 }
 
 interface Announcement {
@@ -48,6 +78,24 @@ export default function AdminPanel({
   setActiveStatusText,
   discordUrl,
   setDiscordUrl,
+  creatorName,
+  setCreatorName,
+  creatorTitle,
+  setCreatorTitle,
+  creatorBio,
+  setCreatorBio,
+  creatorExperience,
+  setCreatorExperience,
+  creatorYoutube,
+  setCreatorYoutube,
+  creatorInstagram,
+  setCreatorInstagram,
+  creatorDiscord,
+  setCreatorDiscord,
+  creatorTiktok,
+  setCreatorTiktok,
+  creatorPortrait,
+  setCreatorPortrait,
 }: AdminPanelProps) {
   // Authentication State
   const [password, setPassword] = useState('');
@@ -60,7 +108,7 @@ export default function AdminPanel({
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
 
   // Active Navigation Tab
-  const [activeTab, setActiveTab] = useState<'settings' | 'announcements' | 'categories' | 'effects' | 'export_code'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'announcements' | 'categories' | 'effects' | 'export_code' | 'creator_profile'>('settings');
 
   // Announcements State
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -149,8 +197,86 @@ export default function AdminPanel({
     setPassword('');
   };
 
+  // --- SEEDING/MIGRATION STATE ---
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  const handleMigrateToFirebase = async () => {
+    if (!isFirebaseConfigured()) return;
+    if (confirm('Tüm mevcut kategori, preset (efekt) ve genel ayarlarınızı Firebase bulut veritabanınıza yüklemek istiyor musunuz? Bu işlem buluttaki mevcut verilerin üzerine yazacaktır.')) {
+      setIsSeeding(true);
+      try {
+        // 1. General Settings
+        await saveGeneralSettings({
+          siteTitle,
+          siteSubtitle,
+          siteBadge,
+          activeStatusTextState: activeStatusText,
+          discordUrl,
+          creatorName,
+          creatorTitle,
+          creatorBio,
+          creatorExperience,
+          creatorYoutube,
+          creatorInstagram,
+          creatorDiscord,
+          creatorTiktok,
+          creatorPortrait
+        });
+
+        // 2. Categories
+        for (const cat of categories) {
+          await saveCategoryToFirebase(cat);
+        }
+
+        // 3. Effects
+        for (const eff of effects) {
+          await saveEffectToFirebase(eff);
+        }
+
+        // 4. Announcements
+        for (const ann of announcements) {
+          await saveAnnouncementToFirebase(ann);
+        }
+
+        alert('Tebrikler! Tüm verileriniz (Kategoriler, Efektler, Duyurular ve Ayarlar) başarıyla Firebase bulut veritabanınıza yüklendi! Sitenizin tüm ziyaretçileri bu güncel verileri canlı olarak görecek.');
+      } catch (e) {
+        console.error(e);
+        alert('Veriler aktarılırken bir hata oluştu: ' + (e as Error).message);
+      } finally {
+        setIsSeeding(false);
+      }
+    }
+  };
+
+  const handleSaveGeneralSettingsToCloud = async () => {
+    if (isFirebaseConfigured()) {
+      try {
+        await saveGeneralSettings({
+          siteTitle,
+          siteSubtitle,
+          siteBadge,
+          activeStatusTextState: activeStatusText,
+          discordUrl,
+          creatorName,
+          creatorTitle,
+          creatorBio,
+          creatorExperience,
+          creatorYoutube,
+          creatorInstagram,
+          creatorDiscord,
+          creatorTiktok,
+          creatorPortrait
+        });
+        alert('Site ve Profil ayarları başarıyla Firebase bulut tabanına kaydedildi!');
+      } catch (e) {
+        console.error(e);
+        alert('Ayarlar kaydedilirken hata oluştu: ' + (e as Error).message);
+      }
+    }
+  };
+
   // --- ANNOUNCEMENT SYSTEM ACTIONS ---
-  const handleAddAnnouncement = () => {
+  const handleAddAnnouncement = async () => {
     if (!announcementText.trim()) return;
 
     const newAnn: Announcement = {
@@ -161,26 +287,66 @@ export default function AdminPanel({
       createdAt: new Date().toLocaleDateString('tr-TR'),
     };
 
-    // If making this active, deactivate all others so we only have one primary scroll banner
-    const updated = announcements.map(ann => ({ ...ann, active: false }));
-    saveAnnouncements([newAnn, ...updated]);
+    if (isFirebaseConfigured()) {
+      try {
+        // If making this active, deactivate all others so we only have one primary scroll banner
+        for (const ann of announcements) {
+          if (ann.active) {
+            await saveAnnouncementToFirebase({ ...ann, active: false });
+          }
+        }
+        await saveAnnouncementToFirebase(newAnn);
+      } catch (e) {
+        console.error("Firebase announcement save error:", e);
+      }
+    } else {
+      const updated = announcements.map(ann => ({ ...ann, active: false }));
+      saveAnnouncements([newAnn, ...updated]);
+    }
     setAnnouncementText('');
   };
 
-  const handleToggleAnnouncementActive = (id: string) => {
-    const updated = announcements.map(ann => {
-      if (ann.id === id) {
-        return { ...ann, active: !ann.active };
+  const handleToggleAnnouncementActive = async (id: string) => {
+    if (isFirebaseConfigured()) {
+      try {
+        const targetAnn = announcements.find(a => a.id === id);
+        if (!targetAnn) return;
+        
+        const newActiveStatus = !targetAnn.active;
+        
+        for (const ann of announcements) {
+          if (ann.id === id) {
+            await saveAnnouncementToFirebase({ ...ann, active: newActiveStatus });
+          } else if (newActiveStatus && ann.active) {
+            // Deactivate others if this is being turned ON
+            await saveAnnouncementToFirebase({ ...ann, active: false });
+          }
+        }
+      } catch (e) {
+        console.error("Firebase announcement toggle error:", e);
       }
-      // Deactivate others if this is being turned ON
-      return { ...ann, active: false };
-    });
-    saveAnnouncements(updated);
+    } else {
+      const updated = announcements.map(ann => {
+        if (ann.id === id) {
+          return { ...ann, active: !ann.active };
+        }
+        return { ...ann, active: false };
+      });
+      saveAnnouncements(updated);
+    }
   };
 
-  const handleDeleteAnnouncement = (id: string) => {
-    const filtered = announcements.filter(ann => ann.id !== id);
-    saveAnnouncements(filtered);
+  const handleDeleteAnnouncement = async (id: string) => {
+    if (isFirebaseConfigured()) {
+      try {
+        await deleteAnnouncementFromFirebase(id);
+      } catch (e) {
+        console.error("Firebase announcement delete error:", e);
+      }
+    } else {
+      const filtered = announcements.filter(ann => ann.id !== id);
+      saveAnnouncements(filtered);
+    }
   };
 
   // Load Announcement Template (Hazır Taslaklar)
@@ -190,26 +356,33 @@ export default function AdminPanel({
   };
 
   // --- CATEGORY ACTIONS ---
-  const handleSaveCategory = () => {
+  const handleSaveCategory = async () => {
     if (!categoryName.trim()) return;
 
     if (editingCategoryId) {
       // Edit
-      const updated = categories.map(cat => {
-        if (cat.id === editingCategoryId) {
-          return {
-            ...cat,
-            name: categoryName,
-            titleTr: categoryName,
-            iconName: categoryIcon,
-            badgeColor: categoryBadgeColor,
-            glowColor: categoryGlowColor,
-            accentColor: categoryAccentColor,
-          };
+      const targetCat = categories.find(c => c.id === editingCategoryId);
+      if (!targetCat) return;
+      const updatedCat: Category = {
+        ...targetCat,
+        name: categoryName,
+        titleTr: categoryName,
+        iconName: categoryIcon,
+        badgeColor: categoryBadgeColor,
+        glowColor: categoryGlowColor,
+        accentColor: categoryAccentColor,
+      };
+      
+      if (isFirebaseConfigured()) {
+        try {
+          await saveCategoryToFirebase(updatedCat);
+        } catch (e) {
+          console.error("Firebase category edit error:", e);
         }
-        return cat;
-      });
-      setCategories(updated);
+      } else {
+        const updated = categories.map(cat => cat.id === editingCategoryId ? updatedCat : cat);
+        setCategories(updated);
+      }
       setEditingCategoryId(null);
     } else {
       // Add new
@@ -225,7 +398,16 @@ export default function AdminPanel({
         glowColor: categoryGlowColor,
         accentColor: categoryAccentColor,
       };
-      setCategories([...categories, newCat]);
+
+      if (isFirebaseConfigured()) {
+        try {
+          await saveCategoryToFirebase(newCat);
+        } catch (e) {
+          console.error("Firebase category add error:", e);
+        }
+      } else {
+        setCategories([...categories, newCat]);
+      }
     }
 
     // Reset Form
@@ -233,12 +415,24 @@ export default function AdminPanel({
     setCategoryIcon('Sparkles');
   };
 
-  const handleDeleteCategory = (id: string) => {
+  const handleDeleteCategory = async (id: string) => {
     if (confirm('Bu kategoriyi ve içindeki tüm efektleri silmek istediğinize emin misiniz?')) {
-      const filteredCats = categories.filter(cat => cat.id !== id);
-      const filteredEffects = effects.filter(eff => eff.categoryId !== id);
-      setCategories(filteredCats);
-      setEffects(filteredEffects);
+      if (isFirebaseConfigured()) {
+        try {
+          await deleteCategoryFromFirebase(id);
+          const associatedEffects = effects.filter(eff => eff.categoryId === id);
+          for (const eff of associatedEffects) {
+            await deleteEffectFromFirebase(eff.id);
+          }
+        } catch (e) {
+          console.error("Firebase category/effects delete error:", e);
+        }
+      } else {
+        const filteredCats = categories.filter(cat => cat.id !== id);
+        const filteredEffects = effects.filter(eff => eff.categoryId !== id);
+        setCategories(filteredCats);
+        setEffects(filteredEffects);
+      }
     }
   };
 
@@ -272,33 +466,40 @@ export default function AdminPanel({
     setEffectVideoPreviewUrl(eff.videoPreviewUrl || '');
   };
 
-  const handleSaveEffect = () => {
+  const handleSaveEffect = async () => {
     if (!effectName.trim() || !effectCategoryId) return;
 
     const reqArray = effectRequirements.split(',').map(s => s.trim()).filter(Boolean);
 
     if (editingEffectId) {
       // Edit
-      const updated = effects.map(eff => {
-        if (eff.id === editingEffectId) {
-          return {
-            ...eff,
-            name: effectName,
-            categoryId: effectCategoryId,
-            description: effectDescription,
-            downloadUrl: effectDownloadUrl,
-            fileSize: effectFileSize,
-            fileType: effectFileType,
-            author: effectAuthor,
-            requirements: reqArray,
-            beforeImage: effectBeforeImage || undefined,
-            afterImage: effectAfterImage || undefined,
-            videoPreviewUrl: effectVideoPreviewUrl || undefined,
-          };
+      const targetEff = effects.find(e => e.id === editingEffectId);
+      if (!targetEff) return;
+      const updatedEff: EffectItem = {
+        ...targetEff,
+        name: effectName,
+        categoryId: effectCategoryId,
+        description: effectDescription,
+        downloadUrl: effectDownloadUrl,
+        fileSize: effectFileSize,
+        fileType: effectFileType,
+        author: effectAuthor,
+        requirements: reqArray,
+        beforeImage: effectBeforeImage || undefined,
+        afterImage: effectAfterImage || undefined,
+        videoPreviewUrl: effectVideoPreviewUrl || undefined,
+      };
+
+      if (isFirebaseConfigured()) {
+        try {
+          await saveEffectToFirebase(updatedEff);
+        } catch (e) {
+          console.error("Firebase effect save error:", e);
         }
-        return eff;
-      });
-      setEffects(updated);
+      } else {
+        const updated = effects.map(eff => eff.id === editingEffectId ? updatedEff : eff);
+        setEffects(updated);
+      }
       setEditingEffectId(null);
     } else {
       // Add new
@@ -319,16 +520,33 @@ export default function AdminPanel({
         afterImage: effectAfterImage || undefined,
         videoPreviewUrl: effectVideoPreviewUrl || undefined,
       };
-      setEffects([newEff, ...effects]);
+
+      if (isFirebaseConfigured()) {
+        try {
+          await saveEffectToFirebase(newEff);
+        } catch (e) {
+          console.error("Firebase effect add error:", e);
+        }
+      } else {
+        setEffects([newEff, ...effects]);
+      }
     }
 
     // Reset Form
     resetEffectForm();
   };
 
-  const handleDeleteEffect = (id: string) => {
+  const handleDeleteEffect = async (id: string) => {
     if (confirm('Bu efekti silmek istediğinize emin misiniz?')) {
-      setEffects(effects.filter(eff => eff.id !== id));
+      if (isFirebaseConfigured()) {
+        try {
+          await deleteEffectFromFirebase(id);
+        } catch (e) {
+          console.error("Firebase effect delete error:", e);
+        }
+      } else {
+        setEffects(effects.filter(eff => eff.id !== id));
+      }
     }
   };
 
@@ -466,6 +684,7 @@ export default function AdminPanel({
             }`}>
               {[
                 { id: 'settings', label: 'GENEL AYARLAR', icon: 'Sliders' },
+                { id: 'creator_profile', label: 'CREATIVE PROFİL', icon: 'User' },
                 { id: 'announcements', label: 'DUYURU SİSTEMİ', icon: 'Megaphone' },
                 { id: 'categories', label: 'KATEGORİLER', icon: 'Layout' },
                 { id: 'effects', label: 'EFEKT KÜTÜPHANESİ', icon: 'Layers' },
@@ -512,6 +731,60 @@ export default function AdminPanel({
                     <h3 className="text-base font-black uppercase tracking-tight">Genel Site Düzenlemeleri</h3>
                     <p className="text-[11px] text-neutral-500 mt-0.5">Sitedeki ana metinleri, başlıkları ve sosyal linkleri anında güncelleyin.</p>
                   </div>
+
+                  {/* FIREBASE CONFIGURATION & SEEDING BOX */}
+                  {isFirebaseConfigured() ? (
+                    <div className={`p-5 rounded-2xl border flex flex-col gap-3.5 bg-emerald-950/10 border-emerald-800/25 text-emerald-400`}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-xs font-black uppercase tracking-wider text-emerald-500">Firebase Bulut Bağlantısı Aktif</span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed text-neutral-400">
+                        Siteniz şu anda canlı bir Firebase Firestore veritabanına bağlıdır. Tüm kategori eklemeleri, duyurular ve efektler anında bulut veritabanı ile senkronize edilir ve ziyaretçilerinize gerçek zamanlı yansıtılır.
+                      </p>
+                      <div className="flex flex-wrap gap-2.5 mt-1">
+                        <button
+                          type="button"
+                          onClick={handleSaveGeneralSettingsToCloud}
+                          className="py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg uppercase tracking-wider active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <LucideIcons.CloudUpload className="w-3.5 h-3.5" />
+                          AYARLARI BULUTA KAYDET
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleMigrateToFirebase}
+                          disabled={isSeeding}
+                          className="py-2 px-4 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-800 text-white text-[10px] font-black rounded-lg uppercase tracking-wider active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          {isSeeding ? (
+                            <>
+                              <LucideIcons.Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              AKTARILIYOR...
+                            </>
+                          ) : (
+                            <>
+                              <LucideIcons.Database className="w-3.5 h-3.5" />
+                              TÜM YEREL VERİLERİ BULUTA AKTAR (SEED/MIGRATE)
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={`p-5 rounded-2xl border flex flex-col gap-3.5 bg-amber-950/10 border-amber-800/25 text-amber-500`}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                        <span className="text-xs font-black uppercase tracking-wider text-amber-500">Yerel Çevrimdışı Mod (LocalStorage)</span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed text-neutral-400">
+                        Firebase bağlantı ayarları henüz girilmemiştir. Sitenizdeki düzenlemeler sadece sizin yerel tarayıcınızda (localStorage) saklanır, genel ziyaretçilere yansıtılmaz. Değişikliklerinizi herkesin görmesi için Firebase kurulumunu tamamlayın.
+                      </p>
+                      <div className="text-[11px] text-neutral-500 leading-relaxed font-mono mt-1">
+                        💡 <b>Nasıl Kurulur?</b> AI Studio Ayarlar menüsünden <b>VITE_FIREBASE_API_KEY</b>, <b>VITE_FIREBASE_PROJECT_ID</b> vb. değişkenleri tanımlayıp sayfayı yenileyin.
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
@@ -628,6 +901,180 @@ export default function AdminPanel({
                 </div>
               )}
 
+              {/* TAB: CREATIVE PROFILE (CREATOR PROFILE EDITING) */}
+              {activeTab === 'creator_profile' && (
+                <div className="flex flex-col gap-6 animate-fade-in">
+                  <div className="flex flex-col leading-tight border-b border-neutral-800/40 pb-3">
+                    <h3 className="text-base font-black uppercase tracking-tight">Creative Profil Düzenleme</h3>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">Sitenin en altında bulunan yaratıcı profil / biyografi alanını özelleştirin.</p>
+                  </div>
+
+                  {/* Cloud status if configured */}
+                  {isFirebaseConfigured() && (
+                    <div className="p-3.5 bg-emerald-950/15 border border-emerald-800/25 rounded-xl text-emerald-400 flex items-center gap-2 text-xs">
+                      <LucideIcons.Cloud className="w-4 h-4 text-emerald-400 animate-pulse" />
+                      <span>Buradaki değişiklikler, üstteki <b>AYARLARI BULUTA KAYDET</b> butonuyla Firebase bulutuna da kaydedilebilir.</span>
+                    </div>
+                  )}
+
+                  <div className={`p-5 rounded-2xl border flex flex-col gap-5 ${
+                    darkMode ? 'bg-[#101012] border-neutral-800/80' : 'bg-neutral-50 border-neutral-200'
+                  }`}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Creator Name */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black uppercase text-neutral-500">YARATICI ADI / MAHLASI</label>
+                        <input
+                          type="text"
+                          value={creatorName}
+                          onChange={(e) => setCreatorName(e.target.value)}
+                          placeholder="Örn: NIKLAUSAE"
+                          className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Creator Title */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black uppercase text-neutral-500">UNVAN / ALANLAR</label>
+                        <input
+                          type="text"
+                          value={creatorTitle}
+                          onChange={(e) => setCreatorTitle(e.target.value)}
+                          placeholder="Örn: VIDEO EDITOR • MOTION DESIGNER"
+                          className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Creator Experience */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black uppercase text-neutral-500">YILLIK DENEYİM DEĞERİ</label>
+                        <input
+                          type="text"
+                          value={creatorExperience}
+                          onChange={(e) => setCreatorExperience(e.target.value)}
+                          placeholder="Örn: 6+ veya 10+"
+                          className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Creator Portrait Image URL */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black uppercase text-neutral-500">PROFİL RESMİ URL (BOŞ BIRAKILIRSA VARSAYILAN KULLANILIR)</label>
+                        <input
+                          type="text"
+                          value={creatorPortrait}
+                          onChange={(e) => setCreatorPortrait(e.target.value)}
+                          placeholder="Resim URL'si girin veya boş bırakın..."
+                          className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Creator Bio */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-black uppercase text-neutral-500">KENDİNİZİ TANITIN (BİYOGRAFİ METNİ)</label>
+                      <textarea
+                        value={creatorBio}
+                        onChange={(e) => setCreatorBio(e.target.value)}
+                        placeholder="Ziyaretçilere kendinizden ve yaptığınız işlerden bahsedin..."
+                        rows={5}
+                        className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                          darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                        }`}
+                      />
+                    </div>
+
+                    {/* SOCIAL LINKS SECTION */}
+                    <div className="border-t border-neutral-800/40 pt-4 mt-2">
+                      <span className="text-[10px] font-black uppercase text-neutral-400 block mb-3">SOSYAL MEDYA LİNKLERİ</span>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Youtube link */}
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[9px] font-black uppercase text-neutral-500 flex items-center gap-1">
+                            <LucideIcons.Youtube className="w-3.5 h-3.5 text-red-500" /> YOUTUBE LİNKİ
+                          </label>
+                          <input
+                            type="text"
+                            value={creatorYoutube}
+                            onChange={(e) => setCreatorYoutube(e.target.value)}
+                            className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                              darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                            }`}
+                          />
+                        </div>
+
+                        {/* Instagram link */}
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[9px] font-black uppercase text-neutral-500 flex items-center gap-1">
+                            <LucideIcons.Instagram className="w-3.5 h-3.5 text-pink-500" /> INSTAGRAM LİNKİ
+                          </label>
+                          <input
+                            type="text"
+                            value={creatorInstagram}
+                            onChange={(e) => setCreatorInstagram(e.target.value)}
+                            className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                              darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                            }`}
+                          />
+                        </div>
+
+                        {/* Discord link */}
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[9px] font-black uppercase text-neutral-500 flex items-center gap-1">
+                            <LucideIcons.MessageSquare className="w-3.5 h-3.5 text-indigo-400" /> DISCORD SUNUCU DAVETİ
+                          </label>
+                          <input
+                            type="text"
+                            value={creatorDiscord}
+                            onChange={(e) => setCreatorDiscord(e.target.value)}
+                            className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                              darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                            }`}
+                          />
+                        </div>
+
+                        {/* Tiktok link */}
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[9px] font-black uppercase text-neutral-500 flex items-center gap-1">
+                            <LucideIcons.Play className="w-3.5 h-3.5 text-sky-400" /> TIKTOK PROFİL LİNKİ
+                          </label>
+                          <input
+                            type="text"
+                            value={creatorTiktok}
+                            onChange={(e) => setCreatorTiktok(e.target.value)}
+                            className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                              darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                            }`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Local save note */}
+                    <div className="flex justify-end gap-2 mt-2">
+                      {isFirebaseConfigured() && (
+                        <button
+                          type="button"
+                          onClick={handleSaveGeneralSettingsToCloud}
+                          className="py-2.5 px-5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black rounded-xl uppercase tracking-wider"
+                        >
+                          PROFİLİ BULUTA KAYDET
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* TAB 2: ANNOUNCEMENT SYSTEM (DUYURU SİSTEMİ) */}
               {activeTab === 'announcements' && (
                 <div className="flex flex-col gap-6 animate-fade-in">
@@ -644,7 +1091,12 @@ export default function AdminPanel({
                         { text: '🎉 YENİ GÜNCELLEME: Tüm renk paketleri (CC) v2\'ye yükseltildi! Hemen indirin.', label: 'Yeni Güncelleme', type: 'success' },
                         { text: '💬 DISCORD KATILIM: Discord sunucumuza katılıp kendi efektlerinizi paylaşabilirsiniz!', label: 'Discord Çağrısı', type: 'discord' },
                         { text: '⚠️ SİSTEM BAKIMI: Sunucumuz bu akşam kısa süreliğine bakıma girecektir.', label: 'Sunucu Bakımı', type: 'warning' },
-                        { text: '🔥 POPÜLER: Yeni Shake Efektlerimiz eklendi, kurgunuzda fark yaratın!', label: 'Trend Duyurusu', type: 'info' }
+                        { text: '🔥 POPÜLER: Yeni Shake Efektlerimiz eklendi, kurgunuzda fark yaratın!', label: 'Trend Duyurusu', type: 'info' },
+                        { text: '🎥 YENİ VİDEO: Niklausae YouTube kanalında yeni After Effects kurgu dersleri yayında!', label: 'Yeni Ders Videosu', type: 'success' },
+                        { text: '💎 V.I.P SÜRÜM: Niklausae Edit Pack Premium üyeler için tüm özel ffx dosyaları güncellendi.', label: 'VIP Güncellemesi', type: 'success' },
+                        { text: '⚡ TWIXTOR AYARI: Ultra akıcı 60fps Twixtor yavaş çekim ayarları tamamen yenilendi!', label: 'Twixtor Güncellemesi', type: 'info' },
+                        { text: '🚀 AE 2026 UYUMLU: Tüm shake, geçiş ve renk paketleri After Effects 2026 ile tam uyumludur.', label: 'AE 2026 Uyumu', type: 'info' },
+                        { text: '🎁 HEDİYE ÇEKİLİŞİ: Discord sunucumuzda bu haftaya özel After Effects eklenti çekilişi başladı!', label: 'Hediye Çekilişi', type: 'warning' }
                       ].map((t, idx) => (
                         <button
                           key={idx}

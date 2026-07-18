@@ -12,6 +12,13 @@ import AdminPanel from './components/AdminPanel';
 import { CATEGORIES, EFFECT_ITEMS } from './data';
 import { EffectItem, Category } from './types';
 import { MessageSquare, ExternalLink, Megaphone } from 'lucide-react';
+import { 
+  isFirebaseConfigured, 
+  subscribeToGeneralSettings, 
+  subscribeToCategories, 
+  subscribeToEffects, 
+  subscribeToAnnouncements 
+} from './lib/firebase';
 
 export default function App() {
   const [darkMode, setDarkMode] = useState<boolean>(true);
@@ -39,6 +46,64 @@ export default function App() {
   const [discordUrl, setDiscordUrl] = useState<string>(() => {
     return localStorage.getItem('pars_mazi_discord_url') || 'https://discord.gg';
   });
+
+  // Creator Profile states
+  const [creatorName, setCreatorName] = useState<string>(() => {
+    return localStorage.getItem('pars_mazi_creator_name') || 'PARS MAZI';
+  });
+  const [creatorTitle, setCreatorTitle] = useState<string>(() => {
+    return localStorage.getItem('pars_mazi_creator_title') || 'VIDEO EDITOR • MOTION DESIGNER';
+  });
+  const [creatorBio, setCreatorBio] = useState<string>(() => {
+    return localStorage.getItem('pars_mazi_creator_bio') || 'Merhaba! Ben Pars Mazi. 6 yılı aşkın süredir After Effects ve Premiere Pro platformlarında profesyonel video kurgu, 3D animasyon ve hareket tasarımı (motion design) yapıyorum.\n\nSiz editörler için hazırladığım bu canlı kütüphanede, kurgularınızı profesyonel seviyeye çıkaracak renk derecelendirmeleri (CC), pürüzsüz dikey/yatay shake\'ler, akıcı Twixtor yavaş çekim ayarları ve geçiş efektleri gibi her editörün arşivinde bulunması gereken en kaliteli hazır ayarları (presets) paylaşıyorum.';
+  });
+  const [creatorExperience, setCreatorExperience] = useState<string>(() => {
+    return localStorage.getItem('pars_mazi_creator_experience') || '6+';
+  });
+  const [creatorYoutube, setCreatorYoutube] = useState<string>(() => {
+    return localStorage.getItem('pars_mazi_creator_youtube') || 'https://youtube.com';
+  });
+  const [creatorInstagram, setCreatorInstagram] = useState<string>(() => {
+    return localStorage.getItem('pars_mazi_creator_instagram') || 'https://instagram.com';
+  });
+  const [creatorDiscord, setCreatorDiscord] = useState<string>(() => {
+    return localStorage.getItem('pars_mazi_creator_discord') || 'https://discord.gg';
+  });
+  const [creatorTiktok, setCreatorTiktok] = useState<string>(() => {
+    return localStorage.getItem('pars_mazi_creator_tiktok') || 'https://tiktok.com';
+  });
+  const [creatorPortrait, setCreatorPortrait] = useState<string>(() => {
+    return localStorage.getItem('pars_mazi_creator_portrait') || '';
+  });
+
+  // Creator Profile local synchronization
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_creator_name', creatorName);
+  }, [creatorName]);
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_creator_title', creatorTitle);
+  }, [creatorTitle]);
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_creator_bio', creatorBio);
+  }, [creatorBio]);
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_creator_experience', creatorExperience);
+  }, [creatorExperience]);
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_creator_youtube', creatorYoutube);
+  }, [creatorYoutube]);
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_creator_instagram', creatorInstagram);
+  }, [creatorInstagram]);
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_creator_discord', creatorDiscord);
+  }, [creatorDiscord]);
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_creator_tiktok', creatorTiktok);
+  }, [creatorTiktok]);
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_creator_portrait', creatorPortrait);
+  }, [creatorPortrait]);
 
   // Dynamic Categories and Effects Lists loaded from LocalStorage
   const [categories, setCategories] = useState<Category[]>(() => {
@@ -68,33 +133,88 @@ export default function App() {
   // Dynamic active announcement
   const [activeAnnouncement, setActiveAnnouncement] = useState<string | null>(null);
 
+  // Live Firebase Subscriptions
   useEffect(() => {
-    const updateAnnouncement = () => {
-      const saved = localStorage.getItem('pars_mazi_announcements');
-      if (saved) {
-        try {
-          const anns = JSON.parse(saved);
-          const activeAnn = anns.find((a: any) => a.active);
-          if (activeAnn) {
-            setActiveAnnouncement(activeAnn.text);
-          } else {
-            setActiveAnnouncement(null);
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      } else {
-        // Default initial announcement
-        setActiveAnnouncement('🎉 YENİ DUYURU: Pars Mazi Edit Arşivi v2 Aktif Edildi! Tüm renk ayarları (CC) güncellendi.');
-      }
-    };
+    if (!isFirebaseConfigured()) return;
 
-    updateAnnouncement();
-    const interval = setInterval(updateAnnouncement, 1500);
-    return () => clearInterval(interval);
+    // Subscribe to General Settings
+    const unsubSettings = subscribeToGeneralSettings((settings) => {
+      if (settings.siteTitle) setSiteTitle(settings.siteTitle);
+      if (settings.siteSubtitle) setSiteSubtitle(settings.siteSubtitle);
+      if (settings.siteBadge) setSiteBadge(settings.siteBadge);
+      if (settings.activeStatusTextState) setActiveStatusTextState(settings.activeStatusTextState);
+      if (settings.discordUrl) setDiscordUrl(settings.discordUrl);
+      if (settings.creatorName) setCreatorName(settings.creatorName);
+      if (settings.creatorTitle) setCreatorTitle(settings.creatorTitle);
+      if (settings.creatorBio) setCreatorBio(settings.creatorBio);
+      if (settings.creatorExperience) setCreatorExperience(settings.creatorExperience);
+      if (settings.creatorYoutube) setCreatorYoutube(settings.creatorYoutube);
+      if (settings.creatorInstagram) setCreatorInstagram(settings.creatorInstagram);
+      if (settings.creatorDiscord) setCreatorDiscord(settings.creatorDiscord);
+      if (settings.creatorTiktok) setCreatorTiktok(settings.creatorTiktok);
+      if (settings.creatorPortrait !== undefined) setCreatorPortrait(settings.creatorPortrait || '');
+    });
+
+    // Subscribe to Categories
+    const unsubCategories = subscribeToCategories((firebaseCats) => {
+      if (firebaseCats && firebaseCats.length > 0) {
+        setCategories(firebaseCats);
+      }
+    });
+
+    // Subscribe to Effects
+    const unsubEffects = subscribeToEffects((firebaseEffects) => {
+      if (firebaseEffects && firebaseEffects.length > 0) {
+        setEffects(firebaseEffects);
+      }
+    });
+
+    return () => {
+      unsubSettings();
+      unsubCategories();
+      unsubEffects();
+    };
   }, []);
 
-  // Save states to LocalStorage
+  useEffect(() => {
+    if (!isFirebaseConfigured()) {
+      const updateAnnouncement = () => {
+        const saved = localStorage.getItem('pars_mazi_announcements');
+        if (saved) {
+          try {
+            const anns = JSON.parse(saved);
+            const activeAnn = anns.find((a: any) => a.active);
+            if (activeAnn) {
+              setActiveAnnouncement(activeAnn.text);
+            } else {
+              setActiveAnnouncement(null);
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        } else {
+          // Default initial announcement
+          setActiveAnnouncement('🎉 YENİ DUYURU: Pars Mazi Edit Arşivi v2 Aktif Edildi! Tüm renk ayarları (CC) güncellendi.');
+        }
+      };
+
+      updateAnnouncement();
+      const interval = setInterval(updateAnnouncement, 1500);
+      return () => clearInterval(interval);
+    } else {
+      const unsubAnnouncements = subscribeToAnnouncements((anns) => {
+        const activeAnn = anns.find(a => a.active);
+        if (activeAnn) {
+          setActiveAnnouncement(activeAnn.text);
+        } else {
+          setActiveAnnouncement(null);
+        }
+      });
+      return () => unsubAnnouncements();
+    }
+  }, []);
+
+  // Save states to LocalStorage (as offline fallback)
   useEffect(() => {
     localStorage.setItem('pars_mazi_site_title', siteTitle);
   }, [siteTitle]);
@@ -296,7 +416,18 @@ export default function App() {
             </section>
 
             {/* Creator profile bio */}
-            <CreatorProfile darkMode={darkMode} />
+            <CreatorProfile 
+              darkMode={darkMode} 
+              creatorName={creatorName}
+              creatorTitle={creatorTitle}
+              creatorBio={creatorBio}
+              creatorExperience={creatorExperience}
+              creatorYoutube={creatorYoutube}
+              creatorInstagram={creatorInstagram}
+              creatorDiscord={creatorDiscord}
+              creatorTiktok={creatorTiktok}
+              creatorPortrait={creatorPortrait}
+            />
           </>
         )}
 
@@ -352,6 +483,24 @@ export default function App() {
         setActiveStatusText={setActiveStatusTextState}
         discordUrl={discordUrl}
         setDiscordUrl={setDiscordUrl}
+        creatorName={creatorName}
+        setCreatorName={setCreatorName}
+        creatorTitle={creatorTitle}
+        setCreatorTitle={setCreatorTitle}
+        creatorBio={creatorBio}
+        setCreatorBio={setCreatorBio}
+        creatorExperience={creatorExperience}
+        setCreatorExperience={setCreatorExperience}
+        creatorYoutube={creatorYoutube}
+        setCreatorYoutube={setCreatorYoutube}
+        creatorInstagram={creatorInstagram}
+        setCreatorInstagram={setCreatorInstagram}
+        creatorDiscord={creatorDiscord}
+        setCreatorDiscord={setCreatorDiscord}
+        creatorTiktok={creatorTiktok}
+        setCreatorTiktok={setCreatorTiktok}
+        creatorPortrait={creatorPortrait}
+        setCreatorPortrait={setCreatorPortrait}
       />
 
     </div>

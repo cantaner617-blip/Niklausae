@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Moon, Sun, Users, Settings } from 'lucide-react';
+import { playSynthesizedSFX } from '../lib/audioGenerator';
 
 interface HeaderProps {
   darkMode: boolean;
@@ -43,7 +44,11 @@ export default function Header({ darkMode, setDarkMode, activeStatusText, onOpen
         {/* Toggle Theme Switch */}
         <button
           id="theme-toggle-btn"
-          onClick={() => setDarkMode(!darkMode)}
+          onClick={() => {
+            const nextMode = !darkMode;
+            setDarkMode(nextMode);
+            playSynthesizedSFX(nextMode ? 'theme-toggle-dark' : 'theme-toggle-light');
+          }}
           className={`flex items-center justify-between gap-4 px-4 py-2.5 rounded-2xl border transition-all duration-300 select-none cursor-pointer ${
             darkMode
               ? 'bg-[#121214] border-neutral-800 text-white hover:border-neutral-700'

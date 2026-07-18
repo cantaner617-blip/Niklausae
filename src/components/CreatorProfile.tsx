@@ -5,9 +5,29 @@ import parsMaziPortrait from '../assets/images/pars_mazi_portrait_1784209992091.
 
 interface CreatorProfileProps {
   darkMode: boolean;
+  creatorName: string;
+  creatorTitle: string;
+  creatorBio: string;
+  creatorExperience: string;
+  creatorYoutube: string;
+  creatorInstagram: string;
+  creatorDiscord: string;
+  creatorTiktok: string;
+  creatorPortrait: string;
 }
 
-export default function CreatorProfile({ darkMode }: CreatorProfileProps) {
+export default function CreatorProfile({
+  darkMode,
+  creatorName,
+  creatorTitle,
+  creatorBio,
+  creatorExperience,
+  creatorYoutube,
+  creatorInstagram,
+  creatorDiscord,
+  creatorTiktok,
+  creatorPortrait
+}: CreatorProfileProps) {
   const [isPortfolioOpen, setIsPortfolioOpen] = useState<boolean>(false);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
 
@@ -25,7 +45,7 @@ export default function CreatorProfile({ darkMode }: CreatorProfileProps) {
         <div className="flex items-center gap-2 mb-6">
           <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.7)]" />
           <span className={`text-[10px] font-black tracking-widest uppercase ${darkMode ? 'text-neutral-400' : 'text-neutral-500'}`}>
-            PARSMAZI / CREATIVE PROFILE
+            {(creatorName || 'PARS MAZI').toUpperCase().replace(/\s+/g, '')} / CREATIVE PROFILE
           </span>
         </div>
 
@@ -36,8 +56,8 @@ export default function CreatorProfile({ darkMode }: CreatorProfileProps) {
           <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden group shadow-2xl border border-neutral-800/20 bg-neutral-900">
             {/* The generated creator image */}
             <img
-              src={parsMaziPortrait}
-              alt="Pars Mazi"
+              src={creatorPortrait || parsMaziPortrait}
+              alt={creatorName}
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover grayscale transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0"
             />
@@ -47,10 +67,10 @@ export default function CreatorProfile({ darkMode }: CreatorProfileProps) {
             {/* Image Overlay Text */}
             <div className="absolute bottom-6 left-6 right-6 flex flex-col text-left">
               <span className="text-[10px] text-red-500 font-extrabold uppercase tracking-widest">
-                VIDEO EDITOR • MOTION DESIGNER
+                {creatorTitle}
               </span>
               <h3 className="text-2xl font-black uppercase text-white tracking-tight mt-1.5 font-sans">
-                PARS MAZI
+                {creatorName}
               </h3>
             </div>
           </div>
@@ -77,10 +97,8 @@ export default function CreatorProfile({ darkMode }: CreatorProfileProps) {
                 <div className="h-[2px] flex-1 bg-gradient-to-r from-pink-500 to-transparent rounded-full" />
               </div>
 
-              <p className={`text-xs leading-relaxed font-medium ${darkMode ? 'text-neutral-400' : 'text-neutral-500'}`}>
-                Merhaba! Ben Pars Mazi. 6 yılı aşkın süredir After Effects ve Premiere Pro platformlarında profesyonel video kurgu, 3D animasyon ve hareket tasarımı (motion design) yapıyorum.
-                <br /><br />
-                Siz editörler için hazırladığım bu canlı kütüphanede, kurgularınızı profesyonel seviyeye çıkaracak renk derecelendirmeleri (CC), pürüzsüz dikey/yatay shake'ler, akıcı Twixtor yavaş çekim ayarları ve geçiş efektleri gibi her editörün arşivinde bulunması gereken en kaliteli hazır ayarları (presets) paylaşıyorum.
+              <p className={`text-xs leading-relaxed font-medium whitespace-pre-line ${darkMode ? 'text-neutral-400' : 'text-neutral-500'}`}>
+                {creatorBio}
               </p>
             </div>
 
@@ -90,7 +108,7 @@ export default function CreatorProfile({ darkMode }: CreatorProfileProps) {
               <div className={`p-3.5 rounded-xl border flex flex-col text-left gap-0.5 leading-tight ${
                 darkMode ? 'bg-[#121214] border-neutral-800' : 'bg-white border-neutral-200'
               }`}>
-                <span className="text-lg font-black tracking-tight text-red-500 font-mono">6+</span>
+                <span className="text-lg font-black tracking-tight text-red-500 font-mono">{creatorExperience || '6+'}</span>
                 <span className="text-[8.5px] font-extrabold tracking-wider text-neutral-500 uppercase mt-0.5">YILLIK DENEYİM</span>
               </div>
               {/* Stat 2 */}
@@ -123,7 +141,7 @@ export default function CreatorProfile({ darkMode }: CreatorProfileProps) {
               {/* Youtube */}
               <a
                 id="social-youtube"
-                href="https://youtube.com"
+                href={creatorYoutube || 'https://youtube.com'}
                 target="_blank"
                 rel="noreferrer"
                 className="w-11 h-11 rounded-full flex items-center justify-center border transition-all duration-300 text-red-500 hover:text-white bg-red-500/5 hover:bg-red-500 border-red-500/20 hover:border-red-500 hover:scale-105"
@@ -133,7 +151,7 @@ export default function CreatorProfile({ darkMode }: CreatorProfileProps) {
               {/* Instagram */}
               <a
                 id="social-instagram"
-                href="https://instagram.com"
+                href={creatorInstagram || 'https://instagram.com'}
                 target="_blank"
                 rel="noreferrer"
                 className="w-11 h-11 rounded-full flex items-center justify-center border transition-all duration-300 text-pink-500 hover:text-white bg-pink-500/5 hover:bg-gradient-to-tr hover:from-yellow-500 hover:via-pink-500 hover:to-purple-500 border-pink-500/20 hover:border-pink-500 hover:scale-105"
@@ -143,7 +161,7 @@ export default function CreatorProfile({ darkMode }: CreatorProfileProps) {
               {/* Discord */}
               <a
                 id="social-discord"
-                href="https://discord.gg"
+                href={creatorDiscord || 'https://discord.gg'}
                 target="_blank"
                 rel="noreferrer"
                 className="w-11 h-11 rounded-full flex items-center justify-center border transition-all duration-300 text-indigo-400 hover:text-white bg-indigo-500/5 hover:bg-[#5865F2] border-indigo-500/20 hover:border-[#5865F2] hover:scale-105"
@@ -153,7 +171,7 @@ export default function CreatorProfile({ darkMode }: CreatorProfileProps) {
               {/* TikTok */}
               <a
                 id="social-tiktok"
-                href="https://tiktok.com"
+                href={creatorTiktok || 'https://tiktok.com'}
                 target="_blank"
                 rel="noreferrer"
                 className={`w-11 h-11 rounded-full flex items-center justify-center border transition-all duration-300 hover:scale-105 ${

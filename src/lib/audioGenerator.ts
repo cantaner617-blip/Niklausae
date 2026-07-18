@@ -791,6 +791,60 @@ export function playSynthesizedSFX(id: string): Promise<boolean> {
         osc.stop(now + 2.5);
       }
 
+      // 25. Theme Toggle Dark (Sunset Chime)
+      else if (id === 'theme-toggle-dark') {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(261.63, now); // C4
+        osc1.frequency.exponentialRampToValueAtTime(130.81, now + 0.35); // C3
+
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(329.63, now); // E4
+        osc2.frequency.exponentialRampToValueAtTime(164.81, now + 0.35); // E3
+
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(mainGain);
+
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 0.45);
+        osc2.stop(now + 0.45);
+      }
+
+      // 26. Theme Toggle Light (Sunrise Chime)
+      else if (id === 'theme-toggle-light') {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(523.25, now); // C5
+        osc1.frequency.exponentialRampToValueAtTime(1046.50, now + 0.3); // C6
+
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(659.25, now); // E5
+        osc2.frequency.exponentialRampToValueAtTime(1318.51, now + 0.3); // E6
+
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(mainGain);
+
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 0.4);
+        osc2.stop(now + 0.4);
+      }
+
       // 24. Analog TV Static White Noise
       else {
         const bufferSize = ctx.sampleRate * 1.5;
