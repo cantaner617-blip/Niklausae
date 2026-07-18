@@ -13,12 +13,12 @@ import {
 import { Category, EffectItem } from '../types';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyA48AM49MOvEHzD9BHsV1Df7HtVBVtzMUw",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "test-3cd0f.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "test-3cd0f",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "test-3cd0f.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "306360012805",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:306360012805:web:19e7f34da4d6250a168c6c"
 };
 
 // Check if all necessary configuration keys are provided
