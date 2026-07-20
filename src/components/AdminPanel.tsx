@@ -13,7 +13,8 @@ import {
   subscribeToAnnouncements,
   setVisitorCountInFirebase,
   fetchAdminPasswordFromFirebase,
-  saveAdminPasswordToFirebase
+  saveAdminPasswordToFirebase,
+  subscribeToAdminPassword
 } from '../lib/firebase';
 import { notifySubscribersOfNewEffect } from '../lib/newsletter';
 
@@ -351,15 +352,14 @@ export default function AdminPanel({
       });
     }
 
+    let unsubPassword: (() => void) | undefined;
     // Fetch synchronized admin password from Firebase if configured
     if (isFirebaseConfigured()) {
-      fetchAdminPasswordFromFirebase().then((remotePassword) => {
+      unsubPassword = subscribeToAdminPassword((remotePassword) => {
         if (remotePassword) {
           setAdminPassword(remotePassword);
           localStorage.setItem('pars_mazi_admin_password', remotePassword);
         }
-      }).catch((err) => {
-        console.error("Error fetching admin password on mount:", err);
       });
     }
 
@@ -371,6 +371,7 @@ export default function AdminPanel({
 
     return () => {
       if (unsub) unsub();
+      if (unsubPassword) unsubPassword();
     };
   }, []);
 

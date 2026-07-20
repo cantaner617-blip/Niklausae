@@ -102,6 +102,24 @@ export const saveAdminPasswordToFirebase = async (password: string): Promise<voi
   }
 };
 
+export const subscribeToAdminPassword = (callback: (password: string) => void) => {
+  if (!isFirebaseConfigured()) return () => {};
+  try {
+    const dbInstance = getFirebaseDB();
+    const docRef = doc(dbInstance, 'settings', 'security');
+    return onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists() && docSnap.data().adminPassword) {
+        callback(docSnap.data().adminPassword);
+      }
+    }, (error) => {
+      console.error("Realtime subscription error (admin password):", error);
+    });
+  } catch (e) {
+    console.error("Error starting realtime admin password subscription:", e);
+    return () => {};
+  }
+};
+
 export const fetchGeneralSettings = async (): Promise<GeneralSettings | null> => {
   if (!isFirebaseConfigured()) return null;
   try {
