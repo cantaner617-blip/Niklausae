@@ -120,6 +120,42 @@ export const subscribeToAdminPassword = (callback: (password: string) => void) =
   }
 };
 
+export interface SystemUpdate {
+  timestamp: string;
+  version: string;
+  message: string;
+}
+
+export const triggerSystemUpdateInFirebase = async (update: SystemUpdate): Promise<void> => {
+  if (!isFirebaseConfigured()) return;
+  try {
+    const dbInstance = getFirebaseDB();
+    const docRef = doc(dbInstance, 'settings', 'systemUpdate');
+    await setDoc(docRef, update);
+  } catch (error) {
+    console.error("Error triggering system update in Firebase:", error);
+    throw error;
+  }
+};
+
+export const subscribeToSystemUpdate = (callback: (update: SystemUpdate) => void) => {
+  if (!isFirebaseConfigured()) return () => {};
+  try {
+    const dbInstance = getFirebaseDB();
+    const docRef = doc(dbInstance, 'settings', 'systemUpdate');
+    return onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        callback(docSnap.data() as SystemUpdate);
+      }
+    }, (error) => {
+      console.error("Realtime subscription error (system update):", error);
+    });
+  } catch (e) {
+    console.error("Error starting realtime system update subscription:", e);
+    return () => {};
+  }
+};
+
 export const fetchGeneralSettings = async (): Promise<GeneralSettings | null> => {
   if (!isFirebaseConfigured()) return null;
   try {

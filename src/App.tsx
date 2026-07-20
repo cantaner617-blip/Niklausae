@@ -13,7 +13,7 @@ import AnnouncementBanner from './components/AnnouncementBanner';
 import NewsletterSubscription from './components/NewsletterSubscription';
 import { CATEGORIES, EFFECT_ITEMS } from './data';
 import { EffectItem, Category } from './types';
-import { MessageSquare, ExternalLink, Megaphone, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MessageSquare, ExternalLink, Megaphone, ChevronLeft, ChevronRight, RefreshCw, AlertTriangle } from 'lucide-react';
 import { 
   isFirebaseConfigured, 
   subscribeToGeneralSettings, 
@@ -24,7 +24,9 @@ import {
   Announcement,
   subscribeToVisitorCount,
   incrementVisitorCount,
-  setVisitorCountInFirebase
+  setVisitorCountInFirebase,
+  subscribeToSystemUpdate,
+  SystemUpdate
 } from './lib/firebase';
 
 export default function App() {
@@ -148,6 +150,11 @@ export default function App() {
   const [currentAnnIndex, setCurrentAnnIndex] = useState<number>(0);
   const [isAnnHovered, setIsAnnHovered] = useState<boolean>(false);
 
+  // Real-time System Update Countdown Overlay State
+  const [activeSystemUpdate, setActiveSystemUpdate] = useState<SystemUpdate | null>(null);
+  const [countdown, setCountdown] = useState<number>(5);
+  const pageMountTime = useRef<number>(Date.now());
+
   // Auto-Save state & refs to prevent infinite loop or saving on mount
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const isIncomingFirebaseUpdate = useRef(false);
@@ -199,12 +206,41 @@ export default function App() {
       }
     });
 
+    // Subscribe to Realtime System / Deployment Updates
+    const unsubSystemUpdate = subscribeToSystemUpdate((update) => {
+      if (update && update.timestamp) {
+        const updateTime = new Date(update.timestamp).getTime();
+        // Trigger only if update was published AFTER the page was loaded
+        if (updateTime > pageMountTime.current) {
+          setActiveSystemUpdate(update);
+        }
+      }
+    });
+
     return () => {
       unsubSettings();
       unsubCategories();
       unsubEffects();
+      unsubSystemUpdate();
     };
   }, []);
+
+  // System update countdown interval
+  useEffect(() => {
+    if (!activeSystemUpdate) return;
+    setCountdown(5);
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          window.location.reload();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [activeSystemUpdate]);
 
   // AUTOMATIC BULUT SAVING EFFECT FOR GENERAL SETTINGS
   useEffect(() => {
@@ -791,6 +827,42 @@ export default function App() {
         visitCount={visitCount}
         setVisitCount={setVisitCount}
       />
+
+      {/* Real-time System Update Countdown Notification Overlay */}
+      {activeSystemUpdate && (
+        <div className="fixed bottom-6 left-6 z-[99999] max-w-sm w-[90%] md:w-full bg-[#0d0d11] border border-violet-500/40 rounded-2xl p-5 shadow-2xl shadow-violet-500/20 backdrop-blur-md animate-fade-in flex flex-col gap-4 text-left">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 bg-violet-600/10 text-violet-400 rounded-xl border border-violet-500/20 animate-spin">
+              <RefreshCw className="w-5 h-5" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-black uppercase text-violet-400 tracking-wider font-mono">
+                SİSTEM GÜNCELLEMESİ! 🚀
+              </span>
+              <p className="text-xs font-bold text-neutral-300 leading-snug">
+                {activeSystemUpdate.message || 'Yeni sürüm/güncelleme alındı!'}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between border-t border-neutral-850/60 pt-3.5">
+            <span className="text-[10px] font-black uppercase text-neutral-500 tracking-wider font-mono">
+              SAYFA YENİLENİYOR
+            </span>
+            <div className="flex items-center gap-1.5 font-black text-violet-400 text-lg">
+              <span className="text-[10px] text-neutral-500 font-bold uppercase font-mono">Saniye:</span>
+              <span className="relative font-mono font-black text-xl">{countdown}</span>
+            </div>
+          </div>
+          
+          <div className="w-full bg-neutral-900 h-1.5 rounded-full overflow-hidden">
+            <div 
+              className="bg-violet-600 h-full rounded-full transition-all duration-1000 ease-linear"
+              style={{ width: `${(countdown / 5) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
 
     </div>
   );

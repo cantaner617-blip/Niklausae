@@ -14,7 +14,8 @@ import {
   setVisitorCountInFirebase,
   fetchAdminPasswordFromFirebase,
   saveAdminPasswordToFirebase,
-  subscribeToAdminPassword
+  subscribeToAdminPassword,
+  triggerSystemUpdateInFirebase
 } from '../lib/firebase';
 import { notifySubscribersOfNewEffect } from '../lib/newsletter';
 
@@ -132,6 +133,7 @@ export default function AdminPanel({
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
   const [campaignLogs, setCampaignLogs] = useState('');
   const [campaignSuccess, setCampaignSuccess] = useState(false);
+  const [isTriggeringUpdate, setIsTriggeringUpdate] = useState(false);
 
   // Load subscribers and campaigns history when Bulletin tab is selected
   useEffect(() => {
@@ -1005,67 +1007,116 @@ export default function AdminPanel({
 
                   {/* FIREBASE CONFIGURATION & SEEDING BOX */}
                   {isFirebaseConfigured() ? (
-                    <div className={`p-5 rounded-2xl border flex flex-col gap-3.5 bg-emerald-950/10 border-emerald-800/25 text-emerald-400`}>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-xs font-black uppercase tracking-wider text-emerald-500">Firebase Bulut Bağlantısı Aktif</span>
+                    <>
+                      <div className={`p-5 rounded-2xl border flex flex-col gap-3.5 bg-emerald-950/10 border-emerald-800/25 text-emerald-400`}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="text-xs font-black uppercase tracking-wider text-emerald-500">Firebase Bulut Bağlantısı Aktif</span>
+                        </div>
+                        <p className="text-[11px] leading-relaxed text-neutral-400">
+                          Siteniz şu anda canlı bir Firebase Firestore veritabanına bağlıdır. Tüm kategori eklemeleri, duyurular ve efektler anında bulut veritabanı ile senkronize edilir ve ziyaretçilerinize gerçek zamanlı yansıtılır.
+                        </p>
+                        <div className="flex flex-wrap gap-2.5 mt-1">
+                          <button
+                            type="button"
+                            onClick={handleSaveGeneralSettingsToCloud}
+                            className={`py-2 px-4 text-white text-[10px] font-black rounded-lg uppercase tracking-wider active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 ${
+                              autoSaveStatus === 'saving' ? 'bg-amber-600 hover:bg-amber-700 animate-pulse' :
+                              autoSaveStatus === 'saved' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                              autoSaveStatus === 'error' ? 'bg-red-600 hover:bg-red-700' :
+                              'bg-violet-600 hover:bg-violet-700'
+                            }`}
+                          >
+                            {autoSaveStatus === 'saving' ? (
+                              <>
+                                <LucideIcons.Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                OTOMATİK KAYDEDİLİYOR...
+                              </>
+                            ) : autoSaveStatus === 'saved' ? (
+                              <>
+                                <LucideIcons.Check className="w-3.5 h-3.5" />
+                                BULUTA KAYDEDİLDİ ✔
+                              </>
+                            ) : autoSaveStatus === 'error' ? (
+                              <>
+                                <LucideIcons.AlertCircle className="w-3.5 h-3.5" />
+                                KAYDETME BAŞARISIZ! TEKRAR DENE
+                              </>
+                            ) : (
+                              <>
+                                <LucideIcons.CloudUpload className="w-3.5 h-3.5" />
+                                BULUTLA EŞİTLENDİ (OTOMATİK)
+                              </>
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleMigrateToFirebase}
+                            disabled={isSeeding}
+                            className="py-2 px-4 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-800 text-white text-[10px] font-black rounded-lg uppercase tracking-wider active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                          >
+                            {isSeeding ? (
+                              <>
+                                <LucideIcons.Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                AKTARILIYOR...
+                              </>
+                            ) : (
+                              <>
+                                <LucideIcons.Database className="w-3.5 h-3.5" />
+                                TÜM YEREL VERİLERİ BULUTA AKTAR (SEED/MIGRATE)
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
-                      <p className="text-[11px] leading-relaxed text-neutral-400">
-                        Siteniz şu anda canlı bir Firebase Firestore veritabanına bağlıdır. Tüm kategori eklemeleri, duyurular ve efektler anında bulut veritabanı ile senkronize edilir ve ziyaretçilerinize gerçek zamanlı yansıtılır.
-                      </p>
-                      <div className="flex flex-wrap gap-2.5 mt-1">
-                        <button
-                          type="button"
-                          onClick={handleSaveGeneralSettingsToCloud}
-                          className={`py-2 px-4 text-white text-[10px] font-black rounded-lg uppercase tracking-wider active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 ${
-                            autoSaveStatus === 'saving' ? 'bg-amber-600 hover:bg-amber-700 animate-pulse' :
-                            autoSaveStatus === 'saved' ? 'bg-emerald-600 hover:bg-emerald-700' :
-                            autoSaveStatus === 'error' ? 'bg-red-600 hover:bg-red-700' :
-                            'bg-violet-600 hover:bg-violet-700'
-                          }`}
-                        >
-                          {autoSaveStatus === 'saving' ? (
-                            <>
-                              <LucideIcons.Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              OTOMATİK KAYDEDİLİYOR...
-                            </>
-                          ) : autoSaveStatus === 'saved' ? (
-                            <>
-                              <LucideIcons.Check className="w-3.5 h-3.5" />
-                              BULUTA KAYDEDİLDİ ✔
-                            </>
-                          ) : autoSaveStatus === 'error' ? (
-                            <>
-                              <LucideIcons.AlertCircle className="w-3.5 h-3.5" />
-                              KAYDETME BAŞARISIZ! TEKRAR DENE
-                            </>
-                          ) : (
-                            <>
-                              <LucideIcons.CloudUpload className="w-3.5 h-3.5" />
-                              BULUTLA EŞİTLENDİ (OTOMATİK)
-                            </>
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleMigrateToFirebase}
-                          disabled={isSeeding}
-                          className="py-2 px-4 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-800 text-white text-[10px] font-black rounded-lg uppercase tracking-wider active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
-                        >
-                          {isSeeding ? (
-                            <>
-                              <LucideIcons.Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              AKTARILIYOR...
-                            </>
-                          ) : (
-                            <>
-                              <LucideIcons.Database className="w-3.5 h-3.5" />
-                              TÜM YEREL VERİLERİ BULUTA AKTAR (SEED/MIGRATE)
-                            </>
-                          )}
-                        </button>
+
+                      {/* SYSTEM UPDATE / RAILWAY TRIGGER BOX */}
+                      <div className={`p-5 rounded-2xl border flex flex-col gap-3.5 bg-violet-950/10 border-violet-800/25 text-violet-400`}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full bg-violet-500 animate-pulse" />
+                          <span className="text-xs font-black uppercase tracking-wider text-violet-500 font-mono">Canlı Sistem Güncellemesi (Railway Yayınlama)</span>
+                        </div>
+                        <p className="text-[11px] leading-relaxed text-neutral-400">
+                          Admin panelinde yaptığınız kritik değişiklikler veya yeni sürüm dağıtımları sonrası sitenin tüm aktif ziyaretçilerde anlık olarak yenilenmesini tetikleyebilirsiniz. Bu butona tıkladığınızda tüm açık tarayıcı sekmelerinde 5 saniyelik bir geri sayım uyarısı çıkacak ve sayfa otomatik olarak güncellenecektir.
+                        </p>
+                        <div>
+                          <button
+                            type="button"
+                            disabled={isTriggeringUpdate}
+                            onClick={async () => {
+                              if (!isFirebaseConfigured()) return;
+                              try {
+                                setIsTriggeringUpdate(true);
+                                await triggerSystemUpdateInFirebase({
+                                  timestamp: new Date().toISOString(),
+                                  version: `v${Date.now().toString().slice(-4)}`,
+                                  message: 'Yönetici tarafından yeni bir site güncellemesi yayınlandı! En son değişiklikler yükleniyor...'
+                                });
+                                alert('Canlı güncelleme sinyali başarıyla tüm aktif ziyaretçilere gönderildi!');
+                              } catch (e) {
+                                console.error(e);
+                                alert('Güncelleme tetiklenirken hata oluştu: ' + (e as Error).message);
+                              } finally {
+                                setIsTriggeringUpdate(false);
+                              }
+                            }}
+                            className="py-2.5 px-4 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-800 text-white text-[10px] font-black rounded-lg uppercase tracking-wider active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 border-none"
+                          >
+                            {isTriggeringUpdate ? (
+                              <>
+                                <LucideIcons.Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                GÜNCELLEME SİNYALİ GÖNDERİLİYOR...
+                              </>
+                            ) : (
+                              <>
+                                <LucideIcons.RefreshCw className="w-3.5 h-3.5" />
+                                CANLI YAYINLA & SİTEYİ GÜNCELLE (RAILWAY GÖNDER)
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    </>
                   ) : (
                     <div className={`p-5 rounded-2xl border flex flex-col gap-3.5 bg-amber-950/10 border-amber-800/25 text-amber-500`}>
                       <div className="flex items-center gap-2">
