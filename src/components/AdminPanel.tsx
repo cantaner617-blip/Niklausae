@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as LucideIcons from 'lucide-react';
-import { Category, EffectItem } from '../types';
+import { Category, EffectItem, FeedbackSubmission } from '../types';
 import {
   isFirebaseConfigured,
   saveGeneralSettings,
@@ -14,9 +14,10 @@ import {
   setVisitorCountInFirebase,
   fetchAdminPasswordFromFirebase,
   saveAdminPasswordToFirebase,
-  subscribeToAdminPassword
+  subscribeToAdminPassword,
+  subscribeToFeedback,
+  deleteFeedbackFromFirebase
 } from '../lib/firebase';
-import { notifySubscribersOfNewEffect } from '../lib/newsletter';
 
 interface AdminPanelProps {
   darkMode: boolean;
@@ -113,15 +114,25 @@ export default function AdminPanel({
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState('');
-  const [adminPassword, setAdminPassword] = useState<string>(() => {
-    return localStorage.getItem('pars_mazi_admin_password') || 'pars123';
-  });
+  const [adminPassword, setAdminPassword] = useState<string>('pars123');
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
 
   // Active Navigation Tab
-  const [activeTab, setActiveTab] = useState<'settings' | 'announcements' | 'categories' | 'effects' | 'subscribers'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'announcements' | 'categories' | 'effects' | 'feedback'>('settings');
   const [settingsSubTab, setSettingsSubTab] = useState<'site' | 'profile' | 'social'>('site');
+
+  // Feedback State
+  const [feedbackList, setFeedbackList] = useState<FeedbackSubmission[]>([]);
+  const [feedbackSearch, setFeedbackSearch] = useState('');
+  const [readFeedbackIds, setReadFeedbackIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('pars_mazi_read_feedback');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Newsletter & Subscribers State
   const [subscribers, setSubscribers] = useState<any[]>([]);
@@ -358,7 +369,6 @@ export default function AdminPanel({
       unsubPassword = subscribeToAdminPassword((remotePassword) => {
         if (remotePassword) {
           setAdminPassword(remotePassword);
-          localStorage.setItem('pars_mazi_admin_password', remotePassword);
         }
       });
     }
@@ -374,6 +384,64 @@ export default function AdminPanel({
       if (unsubPassword) unsubPassword();
     };
   }, []);
+
+  // Load feedback from localStorage or Firebase real-time subscription on mount
+  useEffect(() => {
+    let unsubFeedback: (() => void) | undefined;
+
+    if (!isFirebaseConfigured()) {
+      const saved = localStorage.getItem('pars_mazi_feedback');
+      if (saved) {
+        try {
+          setFeedbackList(JSON.parse(saved));
+        } catch (e) {
+          console.error('Feedback load error', e);
+        }
+      }
+    } else {
+      unsubFeedback = subscribeToFeedback((list) => {
+        setFeedbackList(list);
+      });
+    }
+
+    return () => {
+      if (unsubFeedback) unsubFeedback();
+    };
+  }, []);
+
+  const handleDeleteFeedback = async (id: string) => {
+    if (!confirm('Bu geri bildirimi silmek istediğinize emin misiniz?')) return;
+    
+    if (isFirebaseConfigured()) {
+      try {
+        await deleteFeedbackFromFirebase(id);
+      } catch (err) {
+        console.error("Error deleting feedback from Firebase:", err);
+      }
+    } else {
+      const updated = feedbackList.filter(f => f.id !== id);
+      setFeedbackList(updated);
+      localStorage.setItem('pars_mazi_feedback', JSON.stringify(updated));
+    }
+  };
+
+  const handleMarkAsRead = (id: string) => {
+    setReadFeedbackIds(prev => {
+      if (prev.includes(id)) return prev;
+      const updated = [...prev, id];
+      localStorage.setItem('pars_mazi_read_feedback', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleMarkAllAsRead = () => {
+    const allIds = feedbackList.map(f => f.id);
+    setReadFeedbackIds(prev => {
+      const combined = Array.from(new Set([...prev, ...allIds]));
+      localStorage.setItem('pars_mazi_read_feedback', JSON.stringify(combined));
+      return combined;
+    });
+  };
 
   // Save announcements to localStorage whenever it changes
   const saveAnnouncements = (newAnns: Announcement[]) => {
@@ -392,7 +460,6 @@ export default function AdminPanel({
         if (remotePassword) {
           currentPassword = remotePassword;
           setAdminPassword(remotePassword);
-          localStorage.setItem('pars_mazi_admin_password', remotePassword);
         }
       } catch (err) {
         console.error("Error fetching latest admin password on login:", err);
@@ -772,17 +839,6 @@ export default function AdminPanel({
       } else {
         setEffects([newEff, ...effects]);
       }
-
-      // Notify Newsletter Subscribers of New Effect addition
-      const cat = categories.find(c => c.id === effectCategoryId);
-      const catName = cat ? cat.titleTr : 'Genel';
-      notifySubscribersOfNewEffect(effectName, catName, effectAuthor || 'Pars Mazi')
-        .then((res) => {
-          console.log(`Newsletter notified. Targets: ${res.targetCount}. Logs:\n`, res.logs);
-        })
-        .catch((err) => {
-          console.error("Newsletter notification error:", err);
-        });
     }
 
     // Reset Form
@@ -956,32 +1012,42 @@ export default function AdminPanel({
             <div className={`w-full md:w-56 p-4 flex flex-row md:flex-col gap-2 border-r overflow-x-auto shrink-0 ${
               darkMode ? 'border-neutral-850 bg-[#09090b]' : 'border-neutral-200 bg-neutral-50/50'
             }`}>
-              {[
-                { id: 'settings', label: 'GENEL AYARLAR', icon: 'Sliders' },
-                { id: 'announcements', label: 'DUYURU SİSTEMİ', icon: 'Megaphone' },
-                { id: 'categories', label: 'KATEGORİLER', icon: 'Layout' },
-                { id: 'effects', label: 'EFEKT KÜTÜPHANESİ', icon: 'Layers' },
-                { id: 'subscribers', label: 'BÜLTEN & ABONELER', icon: 'Mail' },
-              ].map((tab) => {
-                const IconComp = (LucideIcons as any)[tab.icon] || LucideIcons.File;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center gap-2.5 py-3 px-4 rounded-xl text-left text-xs font-black tracking-tight select-none cursor-pointer transition-all whitespace-nowrap md:w-full ${
-                      isActive
-                        ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/10'
-                        : darkMode
-                          ? 'hover:bg-neutral-850 text-neutral-400 hover:text-white'
-                          : 'hover:bg-neutral-200/60 text-neutral-600 hover:text-neutral-900'
-                    }`}
-                  >
-                    <IconComp className="w-4 h-4 shrink-0" />
-                    {tab.label}
-                  </button>
-                );
-              })}
+              {(() => {
+                const unreadCount = feedbackList.filter(f => !readFeedbackIds.includes(f.id)).length;
+                return [
+                  { id: 'settings', label: 'GENEL AYARLAR', icon: 'Sliders' },
+                  { id: 'announcements', label: 'DUYURU SİSTEMİ', icon: 'Megaphone' },
+                  { id: 'categories', label: 'KATEGORİLER', icon: 'Layout' },
+                  { id: 'effects', label: 'EFEKT KÜTÜPHANESİ', icon: 'Layers' },
+                  { id: 'feedback', label: 'GERİ BİLDİRİMLER', icon: 'MessageSquare', count: unreadCount },
+                ].map((tab) => {
+                  const IconComp = (LucideIcons as any)[tab.icon] || LucideIcons.File;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`flex items-center justify-between gap-2.5 py-3 px-4 rounded-xl text-left text-xs font-black tracking-tight select-none cursor-pointer transition-all whitespace-nowrap md:w-full ${
+                        isActive
+                          ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/10'
+                          : darkMode
+                            ? 'hover:bg-neutral-850 text-neutral-400 hover:text-white'
+                            : 'hover:bg-neutral-200/60 text-neutral-600 hover:text-neutral-900'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <IconComp className="w-4 h-4 shrink-0" />
+                        {tab.label}
+                      </span>
+                      {tab.count !== undefined && tab.count > 0 && (
+                        <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]">
+                          {tab.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                });
+              })()}
 
               <div className="hidden md:block mt-auto pt-4 border-t border-neutral-800/40">
                 <button
@@ -1240,7 +1306,6 @@ export default function AdminPanel({
                               if (!newPasswordInput.trim()) return;
                               const trimmedPwd = newPasswordInput.trim();
                               
-                              localStorage.setItem('pars_mazi_admin_password', trimmedPwd);
                               setAdminPassword(trimmedPwd);
                               
                               if (isFirebaseConfigured()) {
@@ -1252,7 +1317,7 @@ export default function AdminPanel({
                                   setPasswordChangeSuccess('Şifre yerel olarak güncellendi ancak bulut veritabanına kaydedilemedi: ' + (e as Error).message);
                                 }
                               } else {
-                                setPasswordChangeSuccess('Şifre başarıyla yerel olarak güncellendi: ' + trimmedPwd);
+                                setPasswordChangeSuccess('Şifre başarıyla güncellendi: ' + trimmedPwd);
                               }
                               
                               setNewPasswordInput('');
@@ -2090,219 +2155,180 @@ export default function AdminPanel({
                 </div>
               )}
 
-              {/* TAB 5: NEWSLETTER & SUBSCRIBERS */}
-              {activeTab === 'subscribers' && (
+              {/* TAB 5: FEEDBACK (REPORT & SUGGESTION) */}
+              {activeTab === 'feedback' && (
                 <div className="flex flex-col gap-6 animate-fade-in text-left">
                   <div className="flex flex-col leading-tight border-b border-neutral-800/40 pb-3">
-                    <h3 className="text-base font-black uppercase tracking-tight">E-Posta Bülten & Abone Yönetimi</h3>
-                    <p className="text-[11px] text-neutral-500 mt-0.5">Aboneleri görüntüleyin, manuel kampanya mailleri gönderin ve gönderim geçmişini takip edin.</p>
-                  </div>
-
-                  {/* API Configuration Status Banner */}
-                  <div className={`p-3.5 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs leading-relaxed ${
-                    (import.meta.env.VITE_RESEND_API_KEY || import.meta.env.VITE_EMAILJS_PUBLIC_KEY)
-                      ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'
-                      : 'bg-amber-500/5 border-amber-500/20 text-amber-400'
-                  }`}>
-                    <div className="flex items-center gap-2">
-                      <LucideIcons.KeyRound className="w-4.5 h-4.5 shrink-0" />
-                      <div>
-                        <span className="font-bold">E-Posta Servis Durumu:</span>{' '}
-                        {import.meta.env.VITE_RESEND_API_KEY ? (
-                          <span>Resend API Entegrasyonu Aktif (Üretim Modu)</span>
-                        ) : import.meta.env.VITE_EMAILJS_PUBLIC_KEY ? (
-                          <span>EmailJS Entegrasyonu Aktif (Üretim Modu)</span>
-                        ) : (
-                          <span>Entegrasyon Yok (Geliştirici/Test Simülasyon Modu)</span>
-                        )}
-                      </div>
-                    </div>
-                    {!(import.meta.env.VITE_RESEND_API_KEY || import.meta.env.VITE_EMAILJS_PUBLIC_KEY) && (
-                      <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 font-bold self-start sm:self-auto shrink-0">
-                        SIMULE EDILIR
-                      </span>
-                    )}
+                    <h3 className="text-base font-black uppercase tracking-tight">Kullanıcı Geri Bildirimleri</h3>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">Kullanıcıların gönderdiği öneri ve şikayetleri buradan takip edin.</p>
                   </div>
 
                   {/* Summary Cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className={`p-4 rounded-xl border flex items-center gap-4 ${
                       darkMode ? 'bg-[#0f0f11] border-neutral-850' : 'bg-neutral-50 border-neutral-200'
                     }`}>
-                      <div className="p-3 rounded-lg bg-violet-600/10 text-violet-400">
-                        <LucideIcons.Users className="w-5 h-5" />
+                      <div className="p-3 rounded-lg bg-pink-600/10 text-pink-400">
+                        <LucideIcons.MessageSquare className="w-5 h-5" />
                       </div>
                       <div className="flex flex-col text-left">
-                        <span className="text-lg font-black">{subscribers.length}</span>
-                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Kayıtlı Abone Sayısı</span>
+                        <span className="text-lg font-black">{feedbackList.length}</span>
+                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Toplam Mesaj</span>
                       </div>
                     </div>
 
                     <div className={`p-4 rounded-xl border flex items-center gap-4 ${
                       darkMode ? 'bg-[#0f0f11] border-neutral-850' : 'bg-neutral-50 border-neutral-200'
                     }`}>
-                      <div className="p-3 rounded-lg bg-blue-600/10 text-blue-400">
-                        <LucideIcons.History className="w-5 h-5" />
+                      <div className="p-3 rounded-lg bg-purple-600/10 text-purple-400">
+                        <LucideIcons.Sparkles className="w-5 h-5" />
                       </div>
                       <div className="flex flex-col text-left">
-                        <span className="text-lg font-black">{campaigns.length}</span>
-                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Gönderilen Bülten Kampanyası</span>
+                        <span className="text-lg font-black">
+                          {feedbackList.filter(f => f.type === 'öneri').length}
+                        </span>
+                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Öneri</span>
+                      </div>
+                    </div>
+
+                    <div className={`p-4 rounded-xl border flex items-center gap-4 ${
+                      darkMode ? 'bg-[#0f0f11] border-neutral-850' : 'bg-neutral-50 border-neutral-200'
+                    }`}>
+                      <div className="p-3 rounded-lg bg-red-600/10 text-red-400">
+                        <LucideIcons.AlertTriangle className="w-5 h-5" />
+                      </div>
+                      <div className="flex flex-col text-left">
+                        <span className="text-lg font-black">
+                          {feedbackList.filter(f => f.type === 'şikâyet').length}
+                        </span>
+                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Şikâyet</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                    {/* Left Column: Manual Email Campaign Sender (7 cols) */}
-                    <div className="lg:col-span-7 flex flex-col gap-4">
-                      <div className={`p-5 rounded-2xl border flex flex-col gap-4 ${
-                        darkMode ? 'bg-[#0c0c0e] border-neutral-850' : 'bg-white border-neutral-200 shadow-sm'
-                      }`}>
-                        <span className="text-[10px] font-black uppercase text-neutral-500 font-mono">Manuel Bülten Kampanyası Oluştur</span>
-                        
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-[10px] font-black uppercase text-neutral-400">Kampanya Konusu / E-Posta Başlığı</label>
-                          <input
-                            type="text"
-                            value={customCampaignSubject}
-                            onChange={(e) => setCustomCampaignSubject(e.target.value)}
-                            placeholder="Örn: Pars Mazi Yeni Renk Ayarları (CC) Yayında!"
-                            className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                              darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
-                            }`}
-                          />
-                        </div>
-
-                        <div className="flex flex-col gap-1.5">
-                          <label className="text-[10px] font-black uppercase text-neutral-400">E-Posta İçerik Metni</label>
-                          <textarea
-                            value={customCampaignBody}
-                            onChange={(e) => setCustomCampaignBody(e.target.value)}
-                            placeholder="Abonelerinize iletmek istediğiniz mesajınızı buraya yazın..."
-                            rows={6}
-                            className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 resize-none leading-relaxed ${
-                              darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
-                            }`}
-                          />
-                        </div>
-
-                        <button
-                          onClick={handleSendCustomCampaign}
-                          disabled={isSendingCampaign}
-                          className="w-full py-3 bg-violet-600 hover:bg-violet-700 text-white text-xs font-black rounded-xl uppercase tracking-wider shadow-lg shadow-violet-600/10 flex items-center justify-center gap-2 active:scale-[0.99] transition-all cursor-pointer border-none"
-                        >
-                          {isSendingCampaign ? (
-                            <>
-                              <LucideIcons.Loader2 className="w-4 h-4 animate-spin" />
-                              Gönderiliyor...
-                            </>
-                          ) : (
-                            <>
-                              <LucideIcons.Send className="w-3.5 h-3.5" />
-                              Bülteni Gönder
-                            </>
-                          )}
-                        </button>
-
-                        {/* Live Delivery Terminal Logs */}
-                        {campaignLogs && (
-                          <div className="flex flex-col gap-1.5 mt-2">
-                            <span className="text-[9px] font-black uppercase text-neutral-500 font-mono">Gönderim İletim Terminal Logu</span>
-                            <pre className="p-3 rounded-lg bg-[#050507] border border-neutral-850/80 font-mono text-[10px] text-zinc-400 overflow-x-auto max-h-[140px] leading-relaxed text-left">
-                              {campaignLogs}
-                            </pre>
-                          </div>
-                        )}
-                      </div>
+                  {/* Filter and Search */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="text-[10px] font-black uppercase text-neutral-500 font-mono">Gelen Kutusu ({feedbackList.length})</span>
+                      {(() => {
+                        const unreadCount = feedbackList.filter(f => !readFeedbackIds.includes(f.id)).length;
+                        return unreadCount > 0 ? (
+                          <button
+                            onClick={handleMarkAllAsRead}
+                            className="text-[9px] font-black uppercase text-violet-500 hover:text-violet-400 cursor-pointer bg-violet-500/10 hover:bg-violet-500/15 border border-violet-500/20 px-2 py-1 rounded-lg transition-colors flex items-center gap-1"
+                          >
+                            <LucideIcons.CheckCheck className="w-3 h-3" />
+                            Tümünü Okundu Say ({unreadCount})
+                          </button>
+                        ) : null;
+                      })()}
                     </div>
+                    <div className="relative flex items-center w-full sm:w-64">
+                      <LucideIcons.Search className="absolute left-3 w-4 h-4 text-neutral-500" />
+                      <input
+                        type="text"
+                        value={feedbackSearch}
+                        onChange={(e) => setFeedbackSearch(e.target.value)}
+                        placeholder="Ara (Konu, Mesaj, Gönderen...)"
+                        className={`py-2 pl-9 pr-4 rounded-xl border text-xs w-full focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                          darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                        }`}
+                      />
+                    </div>
+                  </div>
 
-                    {/* Right Column: Subscribers List (5 cols) */}
-                    <div className="lg:col-span-5 flex flex-col gap-4">
-                      {/* Subscriber List Card */}
-                      <div className={`p-5 rounded-2xl border flex flex-col gap-4 ${
-                        darkMode ? 'bg-[#0c0c0e] border-neutral-850' : 'bg-white border-neutral-200 shadow-sm'
-                      }`}>
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="text-[10px] font-black uppercase text-neutral-500 font-mono">Abone Listesi ({subscribers.length})</span>
-                          <div className="relative flex items-center w-28 sm:w-40">
-                            <LucideIcons.Search className="absolute left-2.5 w-3.5 h-3.5 text-neutral-500" />
-                            <input
-                              type="text"
-                              value={subscriberSearch}
-                              onChange={(e) => setSubscriberSearch(e.target.value)}
-                              placeholder="Ara..."
-                              className={`py-1.5 pl-8 pr-3 rounded-lg border text-[10.5px] w-full focus:outline-none ${
-                                darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                  {/* Feedback List Container */}
+                  <div className="flex flex-col gap-3 max-h-[450px] overflow-y-auto pr-1">
+                    {feedbackList.filter(f => 
+                      f.subject.toLowerCase().includes(feedbackSearch.toLowerCase()) ||
+                      f.message.toLowerCase().includes(feedbackSearch.toLowerCase()) ||
+                      (f.name && f.name.toLowerCase().includes(feedbackSearch.toLowerCase())) ||
+                      (f.contact && f.contact.toLowerCase().includes(feedbackSearch.toLowerCase()))
+                    ).length === 0 ? (
+                      <p className="text-neutral-500 text-center py-10 text-xs">Henüz geri bildirim bulunmuyor.</p>
+                    ) : (
+                      feedbackList
+                        .filter(f => 
+                          f.subject.toLowerCase().includes(feedbackSearch.toLowerCase()) ||
+                          f.message.toLowerCase().includes(feedbackSearch.toLowerCase()) ||
+                          (f.name && f.name.toLowerCase().includes(feedbackSearch.toLowerCase())) ||
+                          (f.contact && f.contact.toLowerCase().includes(feedbackSearch.toLowerCase()))
+                        )
+                        .map((feedback) => {
+                          const isUnread = !readFeedbackIds.includes(feedback.id);
+                          return (
+                            <div
+                              key={feedback.id}
+                              onClick={() => { if (isUnread) handleMarkAsRead(feedback.id); }}
+                              className={`p-4 rounded-2xl border flex flex-col md:flex-row items-start justify-between gap-4 text-left relative transition-all ${
+                                isUnread
+                                  ? darkMode
+                                    ? 'bg-violet-950/10 border-violet-500/40 shadow-[0_0_15px_rgba(139,92,246,0.06)] cursor-pointer hover:border-violet-500/60'
+                                    : 'bg-violet-50/30 border-violet-300 shadow-[0_0_15px_rgba(139,92,246,0.04)] cursor-pointer hover:border-violet-400'
+                                  : darkMode
+                                    ? 'bg-[#0c0c0e] border-neutral-850 hover:border-neutral-800'
+                                    : 'bg-white border-neutral-200 shadow-sm hover:shadow'
                               }`}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
-                          {subscribers.filter(s => s.email.includes(subscriberSearch.toLowerCase())).length === 0 ? (
-                            <p className="text-neutral-500 text-center py-6 text-xs">Aranan kriterde abone bulunamadı.</p>
-                          ) : (
-                            subscribers
-                              .filter(s => s.email.includes(subscriberSearch.toLowerCase()))
-                              .map((sub) => (
-                                <div
-                                  key={sub.email}
-                                  className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 text-left ${
-                                    darkMode ? 'bg-[#0f0f11] border-neutral-850/60' : 'bg-neutral-50 border-neutral-200/60'
-                                  }`}
-                                >
-                                  <div className="flex flex-col min-w-0">
-                                    <span className={`text-[11px] font-bold truncate ${darkMode ? 'text-zinc-200' : 'text-neutral-800'}`}>
-                                      {sub.email}
+                            >
+                              <div className="flex flex-col gap-2 min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
+                                    feedback.type === 'öneri'
+                                      ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                                      : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                  }`}>
+                                    {feedback.type}
+                                  </span>
+                                  {isUnread && (
+                                    <span className="text-[9px] font-black bg-emerald-500 text-white px-1.5 py-0.5 rounded animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.3)] select-none">
+                                      YENİ
                                     </span>
-                                    <span className="text-[8.5px] font-mono text-neutral-500 mt-0.5 uppercase">
-                                      KAYIT: {new Date(sub.subscribedAt).toLocaleDateString('tr-TR')}
+                                  )}
+                                  <span className="text-[9.5px] font-mono text-neutral-500">
+                                    {feedback.createdAt}
+                                  </span>
+                                </div>
+
+                                <h4 className={`text-sm font-black leading-snug truncate ${darkMode ? 'text-zinc-150' : 'text-neutral-800'}`}>
+                                  {feedback.subject}
+                                </h4>
+
+                                <p className={`text-[11.5px] leading-relaxed whitespace-pre-wrap font-medium ${darkMode ? 'text-zinc-400' : 'text-neutral-600'}`}>
+                                  {feedback.message}
+                                </p>
+
+                                <div className="flex flex-wrap gap-x-4 gap-y-1.5 border-t border-dashed border-neutral-800/40 pt-2.5 mt-1">
+                                  <div className="flex items-center gap-1 text-[10px] text-neutral-500 font-bold">
+                                    <LucideIcons.User className="w-3 h-3 text-neutral-500" />
+                                    <span>GÖNDEREN:</span>
+                                    <span className={feedback.name ? 'text-neutral-400' : 'text-neutral-600 italic'}>
+                                      {feedback.name || 'Anonim'}
                                     </span>
                                   </div>
-                                  <button
-                                    onClick={() => handleDeleteSubscriber(sub.email)}
-                                    className="p-1.5 rounded-lg border border-red-500/10 hover:bg-red-500/10 text-neutral-500 hover:text-red-500 transition-colors cursor-pointer shrink-0"
-                                    title="Aboneliği Sonlandır"
-                                  >
-                                    <LucideIcons.Trash2 className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              ))
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Campaigns History logs list card */}
-                      <div className={`p-5 rounded-2xl border flex flex-col gap-4 ${
-                        darkMode ? 'bg-[#0c0c0e] border-neutral-850' : 'bg-white border-neutral-200 shadow-sm'
-                      }`}>
-                        <span className="text-[10px] font-black uppercase text-neutral-500 font-mono text-left">Gönderilen Kampanya Geçmişi</span>
-                        <div className="flex flex-col gap-2.5 max-h-[180px] overflow-y-auto pr-1">
-                          {campaigns.length === 0 ? (
-                            <p className="text-neutral-500 text-center py-4 text-xs">Henüz geçmiş bülten bulunmuyor.</p>
-                          ) : (
-                            campaigns.map((camp, idx) => (
-                              <div
-                                key={idx}
-                                className={`p-3 rounded-xl border text-left flex flex-col gap-1.5 ${
-                                  darkMode ? 'bg-[#0f0f11] border-neutral-850/40' : 'bg-neutral-50 border-neutral-200/40'
-                                }`}
-                              >
-                                <span className={`text-xs font-bold ${darkMode ? 'text-zinc-200' : 'text-neutral-800'}`}>
-                                  {camp.subject}
-                                </span>
-                                <p className="text-[10px] text-neutral-500 leading-normal line-clamp-2">
-                                  {camp.body}
-                                </p>
-                                <div className="flex items-center justify-between text-[8.5px] font-mono text-neutral-500 border-t border-neutral-850/40 pt-1.5 mt-0.5">
-                                  <span>Tarih: {new Date(camp.sentAt).toLocaleDateString('tr-TR')}</span>
-                                  <span className="text-violet-400 font-bold">{camp.targetCount} ALICI</span>
+                                  <div className="flex items-center gap-1 text-[10px] text-neutral-500 font-bold">
+                                    <LucideIcons.Mail className="w-3 h-3 text-neutral-500" />
+                                    <span>İLETİŞİM:</span>
+                                    <span className={feedback.contact ? 'text-neutral-400' : 'text-neutral-600 italic'}>
+                                      {feedback.contact || 'Belirtilmemiş'}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    </div>
+
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteFeedback(feedback.id);
+                                }}
+                                className="p-2 rounded-xl border border-red-500/10 hover:bg-red-500/10 text-neutral-500 hover:text-red-500 transition-colors cursor-pointer shrink-0 self-end md:self-start"
+                                title="Geri Bildirimi Sil"
+                              >
+                                <LucideIcons.Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          );
+                        })
+                    )}
                   </div>
                 </div>
               )}

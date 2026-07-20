@@ -35,6 +35,25 @@ export default function Header({ darkMode, setDarkMode, activeStatusText, onOpen
     return `${countStr} AKTİF EDİTÖR ÇEVRİMİÇİ`;
   })();
 
+  const [secretClicks, setSecretClicks] = useState(0);
+  const [lastClickTime, setLastClickTime] = useState(0);
+
+  const handleVisitorCardClick = () => {
+    const now = Date.now();
+    if (now - lastClickTime < 2500) {
+      const updatedClicks = secretClicks + 1;
+      if (updatedClicks >= 5) {
+        onOpenAdmin();
+        setSecretClicks(0);
+      } else {
+        setSecretClicks(updatedClicks);
+      }
+    } else {
+      setSecretClicks(1);
+    }
+    setLastClickTime(now);
+  };
+
   return (
     <header className="w-full flex flex-col gap-4">
       {/* Top Bar with theme and visits */}
@@ -76,28 +95,14 @@ export default function Header({ darkMode, setDarkMode, activeStatusText, onOpen
           </div>
         </button>
 
-        {/* Secret Control Key Switch */}
-        <button
-          id="admin-panel-btn"
-          onClick={onOpenAdmin}
-          className={`p-2.5 rounded-2xl border transition-all duration-300 cursor-pointer ${
-            darkMode
-              ? 'bg-[#121214] border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-700'
-              : 'bg-white border-neutral-200 text-neutral-500 hover:text-neutral-850 hover:border-neutral-350'
-          }`}
-          style={{ boxShadow: darkMode ? '0 4px 20px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,0,0,0.05)' }}
-          title="Yönetici Paneli"
-        >
-          <Settings className="w-5 h-5" />
-        </button>
-
-        {/* Visitor Counter */}
+        {/* Visitor Counter with Secret Admin Entry */}
         <div
           id="visitor-counter-card"
-          className={`flex items-center gap-4 px-5 py-2.5 rounded-2xl border transition-all duration-300 ${
+          onClick={handleVisitorCardClick}
+          className={`flex items-center gap-4 px-5 py-2.5 rounded-2xl border transition-all duration-300 select-none cursor-pointer ${
             darkMode
-              ? 'bg-[#121214] border-neutral-800 text-white'
-              : 'bg-white border-neutral-200 text-neutral-800'
+              ? 'bg-[#121214] border-neutral-800 text-white hover:border-neutral-700/50'
+              : 'bg-white border-neutral-200 text-neutral-800 hover:border-neutral-300/50'
           }`}
           style={{ boxShadow: darkMode ? '0 4px 20px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,0,0,0.05)' }}
         >

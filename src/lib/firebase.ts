@@ -12,7 +12,7 @@ import {
   increment,
   updateDoc
 } from 'firebase/firestore';
-import { Category, EffectItem } from '../types';
+import { Category, EffectItem, FeedbackSubmission } from '../types';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyA48AM49MOvEHzD9BHsV1Df7HtVBVtzMUw",
@@ -78,12 +78,15 @@ export const fetchAdminPasswordFromFirebase = async (): Promise<string | null> =
   if (!isFirebaseConfigured()) return null;
   try {
     const dbInstance = getFirebaseDB();
-    const docRef = doc(dbInstance, 'settings', 'security');
+    const docRef = doc(dbInstance, 'admin_config', 'auth');
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       return docSnap.data().adminPassword || null;
+    } else {
+      // Initialize with default password in Firebase if it does not exist yet
+      await setDoc(docRef, { adminPassword: 'pars123' });
+      return 'pars123';
     }
-    return null;
   } catch (error) {
     console.error("Error fetching admin password from Firebase:", error);
     return null;
@@ -94,7 +97,7 @@ export const saveAdminPasswordToFirebase = async (password: string): Promise<voi
   if (!isFirebaseConfigured()) return;
   try {
     const dbInstance = getFirebaseDB();
-    const docRef = doc(dbInstance, 'settings', 'security');
+    const docRef = doc(dbInstance, 'admin_config', 'auth');
     await setDoc(docRef, { adminPassword: password });
   } catch (error) {
     console.error("Error saving admin password to Firebase:", error);
@@ -106,10 +109,14 @@ export const subscribeToAdminPassword = (callback: (password: string) => void) =
   if (!isFirebaseConfigured()) return () => {};
   try {
     const dbInstance = getFirebaseDB();
-    const docRef = doc(dbInstance, 'settings', 'security');
+    const docRef = doc(dbInstance, 'admin_config', 'auth');
     return onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists() && docSnap.data().adminPassword) {
         callback(docSnap.data().adminPassword);
+      } else if (!docSnap.exists()) {
+        // If document doesn't exist, auto-initialize with default password
+        setDoc(docRef, { adminPassword: 'pars123' }).catch(err => console.error(err));
+        callback('pars123');
       }
     }, (error) => {
       console.error("Realtime subscription error (admin password):", error);
@@ -400,3 +407,80 @@ export const setVisitorCountInFirebase = async (count: number): Promise<void> =>
     throw error;
   }
 };
+
+// --- Feedback / Reports & Suggestions ---
+export const saveFeedbackToFirebase = async (feedback: FeedbackSubmission): Promise<void> => {
+  if (!isFirebaseConfigured()) return;
+  try {
+    const dbInstance = getFirebaseDB();
+    const docRef = doc(dbInstance, 'feedback', feedback.id);
+    await setDoc(docRef, feedback);
+  } catch (error) {
+    console.error("Error saving feedback to Firebase:", error);
+    throw error;
+  }
+};
+
+export const deleteFeedbackFromFirebase = async (id: string): Promise<void> => {
+  if (!isFirebaseConfigured()) return;
+  try {
+    const dbInstance = getFirebaseDB();
+    const docRef = doc(dbInstance, 'feedback', id);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error("Error deleting feedback from Firebase:", error);
+    throw error;
+  }
+};
+
+export const subscribeToFeedback = (callback: (feedbackList: FeedbackSubmission[]) => void) => {
+  if (!isFirebaseConfigured()) return () => {};
+  try {
+    const dbInstance = getFirebaseDB();
+    const colRef = collection(dbInstance, 'feedback');
+    return onSnapshot(colRef, (querySnapshot) => {
+      const feedbackList: FeedbackSubmission[] = [];
+      querySnapshot.forEach((docSnap) => {
+        feedbackList.push(docSnap.data() as FeedbackSubmission);
+      });
+      
+      feedbackList.sort((a, b) => {
+        try {
+          const partsA = a.createdAt.split(', ');
+          const partsB = b.createdAt.split(', ');
+          const datePartsA = partsA[0].split('.');
+          const timePartsA = partsA[1]?.split(':') || ['00', '00'];
+          const datePartsB = partsB[0].split('.');
+          const timePartsB = partsB[1]?.split(':') || ['00', '00'];
+          
+          const dtA = new Date(
+            parseInt(datePartsA[2]),
+            parseInt(datePartsA[1]) - 1,
+            parseInt(datePartsA[0]),
+            parseInt(timePartsA[0]),
+            parseInt(timePartsA[1])
+          ).getTime();
+
+          const dtB = new Date(
+            parseInt(datePartsB[2]),
+            parseInt(datePartsB[1]) - 1,
+            parseInt(datePartsB[0]),
+            parseInt(timePartsB[0]),
+            parseInt(timePartsB[1])
+          ).getTime();
+          
+          return dtB - dtA; // Newest first
+        } catch (e) {
+          return b.id.localeCompare(a.id); // fallback
+        }
+      });
+      callback(feedbackList);
+    }, (error) => {
+      console.error("Realtime subscription error (feedback):", error);
+    });
+  } catch (e) {
+    console.error("Error starting realtime feedback subscription:", e);
+    return () => {};
+  }
+};
+

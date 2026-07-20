@@ -10,7 +10,6 @@ import FeedbackForm from './components/FeedbackForm';
 import CategoryDetail from './components/CategoryDetail';
 import AdminPanel from './components/AdminPanel';
 import AnnouncementBanner from './components/AnnouncementBanner';
-import NewsletterSubscription from './components/NewsletterSubscription';
 import { CATEGORIES, EFFECT_ITEMS } from './data';
 import { EffectItem, Category } from './types';
 import { MessageSquare, ExternalLink, Megaphone, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -309,6 +308,18 @@ export default function App() {
       });
       return () => unsubAnnouncements();
     }
+  }, []);
+
+  // Secret global keyboard shortcut to open Admin Panel: Ctrl + Alt + Shift + A
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.altKey && e.shiftKey && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        setIsAdminOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Auto-cycle active announcements carousel
@@ -697,9 +708,6 @@ export default function App() {
                 <ExternalLink className="w-4 h-4 text-neutral-500 group-hover:text-[#5865F2] group-hover:translate-x-0.5 transition-transform ml-auto" />
               </a>
             </section>
-
-            {/* Newsletter Subscription section */}
-            <NewsletterSubscription darkMode={darkMode} />
 
             {/* Creator profile bio */}
             <CreatorProfile 

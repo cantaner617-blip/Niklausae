@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, MessageSquare, Send, CheckCircle2, History, ChevronDown, ChevronUp } from 'lucide-react';
 import { FeedbackSubmission } from '../types';
+import { saveFeedbackToFirebase, isFirebaseConfigured } from '../lib/firebase';
 
 interface FeedbackFormProps {
   darkMode: boolean;
@@ -30,14 +31,13 @@ export default function FeedbackForm({ darkMode }: FeedbackFormProps) {
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject.trim() || !message.trim()) return;
 
     setIsSubmitting(true);
 
-    // Simulate network delay
-    setTimeout(() => {
+    try {
       const newSubmission: FeedbackSubmission = {
         id: Math.random().toString(36).substring(2, 9),
         type,
@@ -51,14 +51,20 @@ export default function FeedbackForm({ darkMode }: FeedbackFormProps) {
           year: 'numeric',
           hour: '2-digit',
           minute: '2-digit',
+        }) + ', ' + new Date().toLocaleTimeString('tr-TR', {
+          hour: '2-digit',
+          minute: '2-digit'
         }),
       };
+
+      if (isFirebaseConfigured()) {
+        await saveFeedbackToFirebase(newSubmission);
+      }
 
       const updatedHistory = [newSubmission, ...history];
       setHistory(updatedHistory);
       localStorage.setItem('pars_mazi_feedback', JSON.stringify(updatedHistory));
 
-      setIsSubmitting(false);
       setIsSuccess(true);
       
       // Reset form
@@ -66,7 +72,11 @@ export default function FeedbackForm({ darkMode }: FeedbackFormProps) {
       setMessage('');
       setName('');
       setContact('');
-    }, 1200);
+    } catch (err) {
+      console.error('Error submitting feedback:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
