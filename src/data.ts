@@ -71,6 +71,7 @@ export const CATEGORIES: Category[] = [
 
 export const REQUIRED_PLUGINS: RequiredPlugin[] = [
   {
+    id: 'sapphire',
     name: 'Sapphire (S_)',
     category: 'Sallantı, Parlama ve Geçişler',
     description: 'After Effects video editörlerinin olmazsa olmazı ana efekt paketidir. S_Shake, S_Glow, S_Distort vb. yüzlerce gelişmiş efekt içerir.',
@@ -79,6 +80,7 @@ export const REQUIRED_PLUGINS: RequiredPlugin[] = [
     downloadUrl: '#',
   },
   {
+    id: 'bcc',
     name: 'Boris FX Continuum (BCC)',
     category: 'Görsel Efektler ve Geçişler',
     description: 'BCC Fast Lens Blur, BCC Chroma Bands ve 3D parçacık efektleri için kullanılır. Özellikle anime ve oyun editlerinde sıkça tercih edilir.',
@@ -87,6 +89,7 @@ export const REQUIRED_PLUGINS: RequiredPlugin[] = [
     downloadUrl: '#',
   },
   {
+    id: 'mbl',
     name: 'Magic Bullet Looks (Red Giant)',
     category: 'Renk Derecelendirme (CC)',
     description: 'Renk efektlerimizin (CC) büyük bir çoğunluğu bu plugini gerektirir. Sinematik ve doygun renk ayarları için profesyonel araçlar sunar.',
@@ -95,6 +98,7 @@ export const REQUIRED_PLUGINS: RequiredPlugin[] = [
     downloadUrl: '#',
   },
   {
+    id: 'twixtor',
     name: 'Twixtor / Twixtor Pro',
     category: 'Yavaş Çekim (Slow-motion)',
     description: 'Videolarınızı kare atlamadan, yapay zeka desteğiyle pürüzsüzce yavaşlatmanızı sağlar. Anime ve spor editleri için kritik öneme sahiptir.',
@@ -103,6 +107,7 @@ export const REQUIRED_PLUGINS: RequiredPlugin[] = [
     downloadUrl: '#',
   },
   {
+    id: 'deep-glow',
     name: 'Deep Glow',
     category: 'Gerçekçi Parlama Efekti',
     description: 'After Effects\'in varsayılan glow efektinden kat kat daha gerçekçi, fiziksel tabanlı bir ışık parlaması üretir.',
@@ -111,6 +116,7 @@ export const REQUIRED_PLUGINS: RequiredPlugin[] = [
     downloadUrl: '#',
   },
   {
+    id: 'rsmb',
     name: 'RSMB (ReelSmart Motion Blur)',
     category: 'Hareket Bulanıklığı',
     description: 'Hızlı hareket eden nesnelere otomatik olarak gerçekçi kamera hareket bulanıklığı ekler, geçişlerin ve shake\'lerin daha akıcı görünmesini sağlar.',

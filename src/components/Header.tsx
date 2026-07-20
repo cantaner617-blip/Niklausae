@@ -8,9 +8,17 @@ interface HeaderProps {
   activeStatusText: string;
   onOpenAdmin: () => void;
   visitCount: number;
+  unreadFeedbackCount?: number;
 }
 
-export default function Header({ darkMode, setDarkMode, activeStatusText, onOpenAdmin, visitCount }: HeaderProps) {
+export default function Header({ 
+  darkMode, 
+  setDarkMode, 
+  activeStatusText, 
+  onOpenAdmin, 
+  visitCount,
+  unreadFeedbackCount = 0
+}: HeaderProps) {
   const formattedStatusText = (() => {
     const countStr = visitCount.toLocaleString('tr-TR');
     
@@ -99,13 +107,22 @@ export default function Header({ darkMode, setDarkMode, activeStatusText, onOpen
         <div
           id="visitor-counter-card"
           onClick={handleVisitorCardClick}
-          className={`flex items-center gap-4 px-5 py-2.5 rounded-2xl border transition-all duration-300 select-none cursor-pointer ${
+          className={`relative flex items-center gap-4 px-5 py-2.5 rounded-2xl border transition-all duration-300 select-none cursor-pointer ${
             darkMode
               ? 'bg-[#121214] border-neutral-800 text-white hover:border-neutral-700/50'
               : 'bg-white border-neutral-200 text-neutral-800 hover:border-neutral-300/50'
           }`}
           style={{ boxShadow: darkMode ? '0 4px 20px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,0,0,0.05)' }}
+          title={unreadFeedbackCount > 0 ? `${unreadFeedbackCount} Yeni Geri Bildirim` : undefined}
         >
+          {unreadFeedbackCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-5 w-5 bg-rose-500 text-[10px] font-black text-white items-center justify-center font-mono shadow-[0_0_12px_rgba(244,63,94,0.7)] border border-white dark:border-[#121214]">
+                {unreadFeedbackCount}
+              </span>
+            </span>
+          )}
           <div className="flex flex-col items-start leading-none">
             <span className="text-[9px] tracking-wider text-neutral-500 font-bold uppercase">TOPLAM ZİYARET</span>
             <span className="text-base font-extrabold tracking-wide mt-1 font-mono">

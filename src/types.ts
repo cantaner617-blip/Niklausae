@@ -34,6 +34,7 @@ export interface Category {
 }
 
 export interface RequiredPlugin {
+  id: string;
   name: string;
   category: string;
   description: string;

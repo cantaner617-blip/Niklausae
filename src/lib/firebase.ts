@@ -12,7 +12,7 @@ import {
   increment,
   updateDoc
 } from 'firebase/firestore';
-import { Category, EffectItem, FeedbackSubmission } from '../types';
+import { Category, EffectItem, FeedbackSubmission, RequiredPlugin } from '../types';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyA48AM49MOvEHzD9BHsV1Df7HtVBVtzMUw",
@@ -481,6 +481,51 @@ export const subscribeToFeedback = (callback: (feedbackList: FeedbackSubmission[
   } catch (e) {
     console.error("Error starting realtime feedback subscription:", e);
     return () => {};
+  }
+};
+
+// --- Required Plugins ---
+export const subscribeToPlugins = (callback: (plugins: RequiredPlugin[]) => void) => {
+  if (!isFirebaseConfigured()) return () => {};
+  try {
+    const dbInstance = getFirebaseDB();
+    const colRef = collection(dbInstance, 'plugins');
+    return onSnapshot(colRef, (querySnapshot) => {
+      const pluginsList: RequiredPlugin[] = [];
+      querySnapshot.forEach((docSnap) => {
+        pluginsList.push(docSnap.data() as RequiredPlugin);
+      });
+      callback(pluginsList);
+    }, (error) => {
+      console.error("Realtime subscription error (plugins):", error);
+    });
+  } catch (e) {
+    console.error("Error starting realtime plugins subscription:", e);
+    return () => {};
+  }
+};
+
+export const savePluginToFirebase = async (plugin: RequiredPlugin): Promise<void> => {
+  if (!isFirebaseConfigured()) return;
+  try {
+    const dbInstance = getFirebaseDB();
+    const docRef = doc(dbInstance, 'plugins', plugin.id);
+    await setDoc(docRef, plugin);
+  } catch (error) {
+    console.error("Error saving plugin to Firebase:", error);
+    throw error;
+  }
+};
+
+export const deletePluginFromFirebase = async (id: string): Promise<void> => {
+  if (!isFirebaseConfigured()) return;
+  try {
+    const dbInstance = getFirebaseDB();
+    const docRef = doc(dbInstance, 'plugins', id);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error("Error deleting plugin from Firebase:", error);
+    throw error;
   }
 };
 

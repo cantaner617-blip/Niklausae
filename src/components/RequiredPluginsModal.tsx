@@ -1,14 +1,15 @@
 import React from 'react';
 import { X, Play, Download, ShieldCheck } from 'lucide-react';
-import { REQUIRED_PLUGINS } from '../data';
+import { RequiredPlugin } from '../types';
 
 interface RequiredPluginsModalProps {
   darkMode: boolean;
   isOpen: boolean;
   onClose: () => void;
+  plugins: RequiredPlugin[];
 }
 
-export default function RequiredPluginsModal({ darkMode, isOpen, onClose }: RequiredPluginsModalProps) {
+export default function RequiredPluginsModal({ darkMode, isOpen, onClose, plugins }: RequiredPluginsModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -63,9 +64,9 @@ export default function RequiredPluginsModal({ darkMode, isOpen, onClose }: Requ
           </div>
 
           <div className="flex flex-col gap-4">
-            {REQUIRED_PLUGINS.map((plugin, idx) => (
+            {plugins.map((plugin) => (
               <div 
-                key={idx}
+                key={plugin.id || plugin.name}
                 className={`p-5 rounded-2xl border flex flex-col gap-3.5 transition-all duration-200 hover:scale-[1.01] ${
                   darkMode 
                     ? 'bg-[#121214] border-neutral-800 hover:border-neutral-700' 
@@ -95,7 +96,7 @@ export default function RequiredPluginsModal({ darkMode, isOpen, onClose }: Requ
 
                 <div className="flex items-center gap-2.5 mt-1">
                   <a
-                    href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                    href={plugin.videoUrl || "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}
                     target="_blank"
                     rel="noreferrer"
                     className={`flex-1 flex items-center justify-center gap-2 py-2 px-3.5 rounded-xl text-xs font-black tracking-tight border transition-all duration-200 ${
@@ -108,15 +109,27 @@ export default function RequiredPluginsModal({ darkMode, isOpen, onClose }: Requ
                     Kurulum Videosu
                   </a>
                   
-                  <button
-                    onClick={() => {
-                      alert(`${plugin.name} indirme bağlantısı simüle edildi!`);
-                    }}
-                    className="flex-1 flex items-center justify-center gap-2 py-2 px-3.5 rounded-xl text-xs font-black tracking-tight bg-amber-500 hover:bg-amber-600 text-white transition-all duration-200 shadow-[0_4px_12px_rgba(245,158,11,0.25)]"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Plugin İndir
-                  </button>
+                  {plugin.downloadUrl && plugin.downloadUrl !== '#' ? (
+                    <a
+                      href={plugin.downloadUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 flex items-center justify-center gap-2 py-2 px-3.5 rounded-xl text-xs font-black tracking-tight bg-amber-500 hover:bg-amber-600 text-white transition-all duration-200 shadow-[0_4px_12px_rgba(245,158,11,0.25)] text-center"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Plugin İndir
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        alert(`${plugin.name} indirme bağlantısı simüle edildi!`);
+                      }}
+                      className="flex-1 flex items-center justify-center gap-2 py-2 px-3.5 rounded-xl text-xs font-black tracking-tight bg-amber-500 hover:bg-amber-600 text-white transition-all duration-200 shadow-[0_4px_12px_rgba(245,158,11,0.25)]"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Plugin İndir
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

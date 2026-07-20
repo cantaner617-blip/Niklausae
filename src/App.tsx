@@ -10,8 +10,8 @@ import FeedbackForm from './components/FeedbackForm';
 import CategoryDetail from './components/CategoryDetail';
 import AdminPanel from './components/AdminPanel';
 import AnnouncementBanner from './components/AnnouncementBanner';
-import { CATEGORIES, EFFECT_ITEMS } from './data';
-import { EffectItem, Category } from './types';
+import { CATEGORIES, EFFECT_ITEMS, REQUIRED_PLUGINS } from './data';
+import { EffectItem, Category, RequiredPlugin, FeedbackSubmission } from './types';
 import { MessageSquare, ExternalLink, Megaphone, ChevronLeft, ChevronRight } from 'lucide-react';
 import { 
   isFirebaseConfigured, 
@@ -23,7 +23,9 @@ import {
   Announcement,
   subscribeToVisitorCount,
   incrementVisitorCount,
-  setVisitorCountInFirebase
+  setVisitorCountInFirebase,
+  subscribeToPlugins,
+  subscribeToFeedback
 } from './lib/firebase';
 
 export default function App() {
@@ -136,10 +138,45 @@ export default function App() {
     return EFFECT_ITEMS;
   });
 
+  const [requiredPlugins, setRequiredPlugins] = useState<RequiredPlugin[]>(() => {
+    const saved = localStorage.getItem('pars_mazi_required_plugins');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return REQUIRED_PLUGINS;
+  });
+
   // Realtime visitor count state
   const [visitCount, setVisitCount] = useState<number>(() => {
     const stored = localStorage.getItem('pars_mazi_visits');
     return stored ? parseInt(stored, 10) : 1474;
+  });
+
+  // Realtime feedback state (for notifications)
+  const [feedbackList, setFeedbackList] = useState<FeedbackSubmission[]>(() => {
+    const saved = localStorage.getItem('pars_mazi_feedback');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [];
+  });
+
+  // Read feedback IDs tracking
+  const [readFeedbackIds, setReadFeedbackIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('pars_mazi_read_feedback');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
   });
 
   // Dynamic active announcements carousel states
@@ -151,6 +188,35 @@ export default function App() {
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const isIncomingFirebaseUpdate = useRef(false);
   const firstLoad = useRef(true);
+
+  // URL Hash-based protected route sync
+  useEffect(() => {
+    const checkHash = () => {
+      if (window.location.hash === '#/admin' || window.location.hash === '#admin') {
+        setIsAdminOpen(true);
+      } else {
+        setIsAdminOpen(false);
+      }
+    };
+
+    // Check on mount
+    checkHash();
+
+    window.addEventListener('hashchange', checkHash);
+    return () => window.removeEventListener('hashchange', checkHash);
+  }, []);
+
+  useEffect(() => {
+    if (isAdminOpen) {
+      if (window.location.hash !== '#/admin' && window.location.hash !== '#admin') {
+        window.location.hash = '#/admin';
+      }
+    } else {
+      if (window.location.hash === '#/admin' || window.location.hash === '#admin') {
+        window.location.hash = '';
+      }
+    }
+  }, [isAdminOpen]);
 
   // Live Firebase Subscriptions
   useEffect(() => {
@@ -198,10 +264,26 @@ export default function App() {
       }
     });
 
+    // Subscribe to Plugins
+    const unsubPlugins = subscribeToPlugins((firebasePlugins) => {
+      if (firebasePlugins && firebasePlugins.length > 0) {
+        setRequiredPlugins(firebasePlugins);
+      }
+    });
+
+    // Subscribe to Feedback real-time updates
+    const unsubFeedback = subscribeToFeedback((firebaseFeedback) => {
+      if (firebaseFeedback) {
+        setFeedbackList(firebaseFeedback);
+      }
+    });
+
     return () => {
       unsubSettings();
       unsubCategories();
       unsubEffects();
+      unsubPlugins();
+      unsubFeedback();
     };
   }, []);
 
@@ -497,6 +579,18 @@ export default function App() {
     localStorage.setItem('pars_mazi_effects', JSON.stringify(effects));
   }, [effects]);
 
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_required_plugins', JSON.stringify(requiredPlugins));
+  }, [requiredPlugins]);
+
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_feedback', JSON.stringify(feedbackList));
+  }, [feedbackList]);
+
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_read_feedback', JSON.stringify(readFeedbackIds));
+  }, [readFeedbackIds]);
+
   // Synchronize document classes with dark mode state for Tailwind or extra CSS features
   useEffect(() => {
     if (darkMode) {
@@ -608,15 +702,19 @@ export default function App() {
       <main className="w-full max-w-4xl mx-auto px-4 md:px-6 relative z-10 flex flex-col gap-8 pt-6">
         
         {/* Header (Theme and Visits) */}
-        {!selectedCategoryId && (
-          <Header 
-            darkMode={darkMode} 
-            setDarkMode={setDarkMode} 
-            activeStatusText={activeStatusText}
-            onOpenAdmin={() => setIsAdminOpen(true)}
-            visitCount={visitCount}
-          />
-        )}
+        {!selectedCategoryId && (() => {
+          const unreadFeedbackCount = feedbackList.filter(f => !readFeedbackIds.includes(f.id)).length;
+          return (
+            <Header 
+              darkMode={darkMode} 
+              setDarkMode={setDarkMode} 
+              activeStatusText={activeStatusText}
+              onOpenAdmin={() => setIsAdminOpen(true)}
+              visitCount={visitCount}
+              unreadFeedbackCount={unreadFeedbackCount}
+            />
+          );
+        })()}
 
         {/* Active Announcement Carousel */}
         {!selectedCategoryId && activeAnnouncements.length > 0 && (
@@ -745,6 +843,7 @@ export default function App() {
         darkMode={darkMode}
         isOpen={isPluginsModalOpen}
         onClose={() => setIsPluginsModalOpen(false)}
+        plugins={requiredPlugins}
       />
 
       {/* Selected Effect Interactive Detail Modal */}
@@ -767,6 +866,8 @@ export default function App() {
         setCategories={setCategories}
         effects={effects}
         setEffects={setEffects}
+        requiredPlugins={requiredPlugins}
+        setRequiredPlugins={setRequiredPlugins}
         siteTitle={siteTitle}
         setSiteTitle={setSiteTitle}
         siteSubtitle={siteSubtitle}
@@ -798,6 +899,10 @@ export default function App() {
         autoSaveStatus={autoSaveStatus}
         visitCount={visitCount}
         setVisitCount={setVisitCount}
+        feedbackList={feedbackList}
+        setFeedbackList={setFeedbackList}
+        readFeedbackIds={readFeedbackIds}
+        setReadFeedbackIds={setReadFeedbackIds}
       />
 
     </div>

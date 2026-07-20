@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as LucideIcons from 'lucide-react';
-import { Category, EffectItem, FeedbackSubmission } from '../types';
+import { Category, EffectItem, FeedbackSubmission, RequiredPlugin } from '../types';
 import {
   isFirebaseConfigured,
   saveGeneralSettings,
@@ -16,7 +16,9 @@ import {
   saveAdminPasswordToFirebase,
   subscribeToAdminPassword,
   subscribeToFeedback,
-  deleteFeedbackFromFirebase
+  deleteFeedbackFromFirebase,
+  savePluginToFirebase,
+  deletePluginFromFirebase
 } from '../lib/firebase';
 
 interface AdminPanelProps {
@@ -27,6 +29,8 @@ interface AdminPanelProps {
   setCategories: (cats: Category[]) => void;
   effects: EffectItem[];
   setEffects: (items: EffectItem[]) => void;
+  requiredPlugins: RequiredPlugin[];
+  setRequiredPlugins: (plugins: RequiredPlugin[]) => void;
   siteTitle: string;
   setSiteTitle: (title: string) => void;
   siteSubtitle: string;
@@ -59,6 +63,10 @@ interface AdminPanelProps {
   autoSaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
   visitCount: number;
   setVisitCount: (count: number) => void;
+  feedbackList: FeedbackSubmission[];
+  setFeedbackList: (list: FeedbackSubmission[]) => void;
+  readFeedbackIds: string[];
+  setReadFeedbackIds: (ids: string[] | ((prev: string[]) => string[])) => void;
 }
 
 interface Announcement {
@@ -78,6 +86,8 @@ export default function AdminPanel({
   setCategories,
   effects,
   setEffects,
+  requiredPlugins,
+  setRequiredPlugins,
   siteTitle,
   setSiteTitle,
   siteSubtitle,
@@ -109,6 +119,10 @@ export default function AdminPanel({
   autoSaveStatus = 'idle',
   visitCount,
   setVisitCount,
+  feedbackList,
+  setFeedbackList,
+  readFeedbackIds,
+  setReadFeedbackIds,
 }: AdminPanelProps) {
   // Authentication State
   const [password, setPassword] = useState('');
@@ -119,20 +133,12 @@ export default function AdminPanel({
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
 
   // Active Navigation Tab
-  const [activeTab, setActiveTab] = useState<'settings' | 'announcements' | 'categories' | 'effects' | 'feedback'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'announcements' | 'categories' | 'effects' | 'feedback' | 'plugins'>('settings');
+  const [masterTab, setMasterTab] = useState<'site' | 'content' | 'messages'>('site');
   const [settingsSubTab, setSettingsSubTab] = useState<'site' | 'profile' | 'social'>('site');
 
   // Feedback State
-  const [feedbackList, setFeedbackList] = useState<FeedbackSubmission[]>([]);
   const [feedbackSearch, setFeedbackSearch] = useState('');
-  const [readFeedbackIds, setReadFeedbackIds] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('pars_mazi_read_feedback');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
 
   // Newsletter & Subscribers State
   const [subscribers, setSubscribers] = useState<any[]>([]);
@@ -331,6 +337,15 @@ export default function AdminPanel({
   const [effectAfterImage, setEffectAfterImage] = useState('');
   const [effectVideoPreviewUrl, setEffectVideoPreviewUrl] = useState('');
 
+  // Required Plugins Form State
+  const [editingPluginId, setEditingPluginId] = useState<string | null>(null);
+  const [pluginName, setPluginName] = useState('');
+  const [pluginCategory, setPluginCategory] = useState('');
+  const [pluginDescription, setPluginDescription] = useState('');
+  const [pluginRequirements, setPluginRequirements] = useState('');
+  const [pluginVideoUrl, setPluginVideoUrl] = useState('');
+  const [pluginDownloadUrl, setPluginDownloadUrl] = useState('');
+
   // Load announcements from localStorage or Firebase real-time subscription on mount
   useEffect(() => {
     let unsub: (() => void) | undefined;
@@ -382,30 +397,6 @@ export default function AdminPanel({
     return () => {
       if (unsub) unsub();
       if (unsubPassword) unsubPassword();
-    };
-  }, []);
-
-  // Load feedback from localStorage or Firebase real-time subscription on mount
-  useEffect(() => {
-    let unsubFeedback: (() => void) | undefined;
-
-    if (!isFirebaseConfigured()) {
-      const saved = localStorage.getItem('pars_mazi_feedback');
-      if (saved) {
-        try {
-          setFeedbackList(JSON.parse(saved));
-        } catch (e) {
-          console.error('Feedback load error', e);
-        }
-      }
-    } else {
-      unsubFeedback = subscribeToFeedback((list) => {
-        setFeedbackList(list);
-      });
-    }
-
-    return () => {
-      if (unsubFeedback) unsubFeedback();
     };
   }, []);
 
@@ -745,6 +736,94 @@ export default function AdminPanel({
     }
   };
 
+  // --- REQUIRED PLUGINS ACTIONS ---
+  const handleSavePlugin = async () => {
+    if (!pluginName.trim() || !pluginCategory.trim()) {
+      alert('Lütfen en azından Plugin Adı ve Kategori alanlarını doldurun.');
+      return;
+    }
+
+    if (editingPluginId) {
+      // Edit mode
+      const updatedPlugin: RequiredPlugin = {
+        id: editingPluginId,
+        name: pluginName.trim(),
+        category: pluginCategory.trim(),
+        description: pluginDescription.trim(),
+        requirements: pluginRequirements.trim(),
+        videoUrl: pluginVideoUrl.trim() || undefined,
+        downloadUrl: pluginDownloadUrl.trim() || undefined,
+      };
+
+      if (isFirebaseConfigured()) {
+        try {
+          await savePluginToFirebase(updatedPlugin);
+        } catch (e) {
+          console.error("Firebase plugin edit error:", e);
+        }
+      } else {
+        const updated = requiredPlugins.map(p => p.id === editingPluginId ? updatedPlugin : p);
+        setRequiredPlugins(updated);
+      }
+      setEditingPluginId(null);
+    } else {
+      // Add mode
+      const newId = pluginName.toLowerCase().replace(/[^a-z0-9]/g, '-') || Date.now().toString();
+      const newPlugin: RequiredPlugin = {
+        id: newId,
+        name: pluginName.trim(),
+        category: pluginCategory.trim(),
+        description: pluginDescription.trim(),
+        requirements: pluginRequirements.trim(),
+        videoUrl: pluginVideoUrl.trim() || undefined,
+        downloadUrl: pluginDownloadUrl.trim() || undefined,
+      };
+
+      if (isFirebaseConfigured()) {
+        try {
+          await savePluginToFirebase(newPlugin);
+        } catch (e) {
+          console.error("Firebase plugin save error:", e);
+        }
+      } else {
+        setRequiredPlugins([...requiredPlugins, newPlugin]);
+      }
+    }
+
+    // Reset fields
+    setPluginName('');
+    setPluginCategory('');
+    setPluginDescription('');
+    setPluginRequirements('');
+    setPluginVideoUrl('');
+    setPluginDownloadUrl('');
+  };
+
+  const startEditingPlugin = (plugin: RequiredPlugin) => {
+    setEditingPluginId(plugin.id);
+    setPluginName(plugin.name);
+    setPluginCategory(plugin.category);
+    setPluginDescription(plugin.description);
+    setPluginRequirements(plugin.requirements);
+    setPluginVideoUrl(plugin.videoUrl || '');
+    setPluginDownloadUrl(plugin.downloadUrl || '');
+  };
+
+  const handleDeletePlugin = async (id: string) => {
+    if (confirm('Bu plugini silmek istediğinize emin misiniz?')) {
+      if (isFirebaseConfigured()) {
+        try {
+          await deletePluginFromFirebase(id);
+        } catch (e) {
+          console.error("Firebase plugin delete error:", e);
+        }
+      } else {
+        const filtered = requiredPlugins.filter(p => p.id !== id);
+        setRequiredPlugins(filtered);
+      }
+    }
+  };
+
   // --- EFFECT ACTIONS ---
   const resetEffectForm = () => {
     setEditingEffectId(null);
@@ -1006,53 +1085,115 @@ export default function AdminPanel({
             </form>
           </div>
         ) : (
-          /* Main Dashboard Layout */
-          <div className="flex-1 flex flex-col md:flex-row relative z-10 min-h-[450px]">
-            {/* Sidebar Navigation */}
-            <div className={`w-full md:w-56 p-4 flex flex-row md:flex-col gap-2 border-r overflow-x-auto shrink-0 ${
-              darkMode ? 'border-neutral-850 bg-[#09090b]' : 'border-neutral-200 bg-neutral-50/50'
-            }`}>
-              {(() => {
-                const unreadCount = feedbackList.filter(f => !readFeedbackIds.includes(f.id)).length;
-                return [
-                  { id: 'settings', label: 'GENEL AYARLAR', icon: 'Sliders' },
-                  { id: 'announcements', label: 'DUYURU SİSTEMİ', icon: 'Megaphone' },
-                  { id: 'categories', label: 'KATEGORİLER', icon: 'Layout' },
-                  { id: 'effects', label: 'EFEKT KÜTÜPHANESİ', icon: 'Layers' },
-                  { id: 'feedback', label: 'GERİ BİLDİRİMLER', icon: 'MessageSquare', count: unreadCount },
-                ].map((tab) => {
-                  const IconComp = (LucideIcons as any)[tab.icon] || LucideIcons.File;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center justify-between gap-2.5 py-3 px-4 rounded-xl text-left text-xs font-black tracking-tight select-none cursor-pointer transition-all whitespace-nowrap md:w-full ${
-                        isActive
-                          ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/10'
-                          : darkMode
-                            ? 'hover:bg-neutral-850 text-neutral-400 hover:text-white'
-                            : 'hover:bg-neutral-200/60 text-neutral-600 hover:text-neutral-900'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <IconComp className="w-4 h-4 shrink-0" />
-                        {tab.label}
-                      </span>
-                      {tab.count !== undefined && tab.count > 0 && (
-                        <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]">
-                          {tab.count}
-                        </span>
-                      )}
-                    </button>
-                  );
-                });
-              })()}
+          <div className="flex-1 flex flex-col relative z-10">
+            {/* Master Category Tabs */}
+            <div className={`grid grid-cols-3 border-b text-center shrink-0 ${darkMode ? 'border-neutral-850 bg-[#09090b]' : 'border-neutral-200 bg-neutral-50'}`}>
+              <button
+                type="button"
+                onClick={() => {
+                  setMasterTab('site');
+                  setActiveTab('settings');
+                }}
+                className={`py-4 px-2 text-[10px] sm:text-xs font-black tracking-wider flex items-center justify-center gap-2 border-b-2 transition-all cursor-pointer select-none leading-none ${
+                  masterTab === 'site'
+                    ? 'border-violet-500 text-violet-400 bg-violet-500/5'
+                    : 'border-transparent text-neutral-400 hover:text-white'
+                }`}
+              >
+                <LucideIcons.Sliders className="w-3.5 h-3.5" />
+                SİTE AYARLARI
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMasterTab('content');
+                  setActiveTab('categories');
+                }}
+                className={`py-4 px-2 text-[10px] sm:text-xs font-black tracking-wider flex items-center justify-center gap-2 border-b-2 transition-all cursor-pointer select-none leading-none ${
+                  masterTab === 'content'
+                    ? 'border-violet-500 text-violet-400 bg-violet-500/5'
+                    : 'border-transparent text-neutral-400 hover:text-white'
+                }`}
+              >
+                <LucideIcons.Layers className="w-3.5 h-3.5" />
+                İÇERİK YÖNETİMİ
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMasterTab('messages');
+                  setActiveTab('feedback');
+                }}
+                className={`py-4 px-2 text-[10px] sm:text-xs font-black tracking-wider flex items-center justify-center gap-2 border-b-2 transition-all cursor-pointer relative select-none leading-none ${
+                  masterTab === 'messages'
+                    ? 'border-violet-500 text-violet-400 bg-violet-500/5'
+                    : 'border-transparent text-neutral-400 hover:text-white'
+                }`}
+              >
+                <LucideIcons.MessageSquare className="w-3.5 h-3.5" />
+                MESAJLAR
+                {feedbackList.filter(f => !readFeedbackIds.includes(f.id)).length > 0 && (
+                  <span className="absolute top-2 right-2 sm:right-4 h-4.5 w-4.5 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]">
+                    {feedbackList.filter(f => !readFeedbackIds.includes(f.id)).length}
+                  </span>
+                )}
+              </button>
+            </div>
 
-              <div className="hidden md:block mt-auto pt-4 border-t border-neutral-800/40">
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-2 py-2 px-4 rounded-lg text-left text-[11px] font-bold text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+            {/* Main Dashboard Layout */}
+            <div className="flex-1 flex flex-col md:flex-row min-h-[450px]">
+              {/* Sidebar Navigation */}
+              <div className={`w-full md:w-56 p-4 flex flex-row md:flex-col gap-2 border-r overflow-x-auto shrink-0 ${
+                darkMode ? 'border-neutral-850 bg-[#09090b]' : 'border-neutral-200 bg-neutral-50/50'
+              }`}>
+                {(() => {
+                  const unreadCount = feedbackList.filter(f => !readFeedbackIds.includes(f.id)).length;
+                  const allTabs = [
+                    { id: 'settings', label: 'GENEL AYARLAR', icon: 'Sliders', master: 'site' },
+                    { id: 'announcements', label: 'DUYURU SİSTEMİ', icon: 'Megaphone', master: 'site' },
+                    { id: 'categories', label: 'KATEGORİLER', icon: 'Layout', master: 'content' },
+                    { id: 'effects', label: 'EFEKT KÜTÜPHANESİ', icon: 'Layers', master: 'content' },
+                    { id: 'plugins', label: 'GEREKLİ PLUGİNLER', icon: 'Cpu', master: 'content' },
+                    { id: 'feedback', label: 'GERİ BİLDİRİMLER', icon: 'MessageSquare', count: unreadCount, master: 'messages' },
+                  ];
+
+                  const filteredTabs = allTabs.filter(t => t.master === masterTab);
+
+                  return filteredTabs.map((tab) => {
+                    const IconComp = (LucideIcons as any)[tab.icon] || LucideIcons.File;
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <button
+                        type="button"
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as any)}
+                        className={`flex items-center justify-between gap-2.5 py-3 px-4 rounded-xl text-left text-xs font-black tracking-tight select-none cursor-pointer transition-all whitespace-nowrap md:w-full ${
+                          isActive
+                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/10'
+                            : darkMode
+                              ? 'hover:bg-neutral-850 text-neutral-400 hover:text-white'
+                              : 'hover:bg-neutral-200/60 text-neutral-600 hover:text-neutral-900'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <IconComp className="w-4 h-4 shrink-0" />
+                          {tab.label}
+                        </span>
+                        {tab.count !== undefined && tab.count > 0 && (
+                          <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]">
+                            {tab.count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  });
+                })()}
+
+                <div className="hidden md:block mt-auto pt-4 border-t border-neutral-800/40">
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 py-2 px-4 rounded-lg text-left text-[11px] font-bold text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
                 >
                   <LucideIcons.LogOut className="w-3.5 h-3.5" />
                   GÜVENLİ ÇIKIŞ
@@ -2155,6 +2296,188 @@ export default function AdminPanel({
                 </div>
               )}
 
+              {/* TAB 4.5: REQUIRED PLUGINS MANAGEMENT */}
+              {activeTab === 'plugins' && (
+                <div className="flex flex-col gap-6 animate-fade-in text-left">
+                  <div className="flex flex-col leading-tight border-b border-neutral-800/40 pb-3">
+                    <h3 className="text-base font-black uppercase tracking-tight">Gerekli Pluginler Yönetimi</h3>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">Sitede listelenen, After Effects paketlerinin çalışması için gerekli olan eklentileri (pluginleri) ekleyin, düzenleyin veya silin.</p>
+                  </div>
+
+                  {/* Plugin Form */}
+                  <div className={`p-5 rounded-2xl border flex flex-col gap-4 ${
+                    darkMode ? 'bg-[#0f0f11]/60 border-neutral-850' : 'bg-neutral-50 border-neutral-200'
+                  }`}>
+                    <span className="text-[10px] font-black uppercase text-neutral-500 font-mono">
+                      {editingPluginId ? 'PLUGİNİ DÜZENLE' : 'YENİ PLUGİN EKLE'}
+                    </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Name */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold text-neutral-400">Plugin Adı *</label>
+                        <input
+                          type="text"
+                          value={pluginName}
+                          onChange={(e) => setPluginName(e.target.value)}
+                          placeholder="Örn: Sapphire"
+                          className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Category */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold text-neutral-400">Eklenti Kategorisi *</label>
+                        <input
+                          type="text"
+                          value={pluginCategory}
+                          onChange={(e) => setPluginCategory(e.target.value)}
+                          placeholder="Örn: Efekt Eklentisi, Geçiş Eklentisi"
+                          className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Requirements */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold text-neutral-400">Sürüm Gereksinimleri</label>
+                        <input
+                          type="text"
+                          value={pluginRequirements}
+                          onChange={(e) => setPluginRequirements(e.target.value)}
+                          placeholder="Örn: AE 2020+ • Win & Mac"
+                          className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Video URL */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold text-neutral-400">Kurulum Videosu Linki</label>
+                        <input
+                          type="text"
+                          value={pluginVideoUrl}
+                          onChange={(e) => setPluginVideoUrl(e.target.value)}
+                          placeholder="https://..."
+                          className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Download URL */}
+                      <div className="flex flex-col gap-1.5 sm:col-span-2">
+                        <label className="text-[10px] font-bold text-neutral-400">İndirme Bağlantısı (Download URL)</label>
+                        <input
+                          type="text"
+                          value={pluginDownloadUrl}
+                          onChange={(e) => setPluginDownloadUrl(e.target.value)}
+                          placeholder="https://... (veya simüle edilmesini istiyorsanız boş bırakın)"
+                          className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Description */}
+                      <div className="flex flex-col gap-1.5 sm:col-span-2">
+                        <label className="text-[10px] font-bold text-neutral-400">Eklenti Açıklaması</label>
+                        <textarea
+                          rows={2}
+                          value={pluginDescription}
+                          onChange={(e) => setPluginDescription(e.target.value)}
+                          placeholder="Bu eklenti ne işe yarar, hangi paketlerde gereklidir?"
+                          className={`py-2 px-3 rounded-xl border text-xs resize-none focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 mt-2">
+                      {editingPluginId && (
+                        <button
+                          onClick={() => {
+                            setEditingPluginId(null);
+                            setPluginName('');
+                            setPluginCategory('');
+                            setPluginDescription('');
+                            setPluginRequirements('');
+                            setPluginVideoUrl('');
+                            setPluginDownloadUrl('');
+                          }}
+                          className={`py-2 px-4 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
+                            darkMode ? 'bg-neutral-900 hover:bg-neutral-850 text-neutral-400 hover:text-white' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-600'
+                          }`}
+                        >
+                          İPTAL
+                        </button>
+                      )}
+                      <button
+                        onClick={handleSavePlugin}
+                        className="py-2 px-5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-black rounded-xl uppercase tracking-wider"
+                      >
+                        {editingPluginId ? 'PLUGİNİ GÜNCELLE' : 'YENİ PLUGİN EKLE'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* List of current plugins */}
+                  <div className="flex flex-col gap-3">
+                    <span className="text-[10px] font-black uppercase text-neutral-500 font-mono">MEVCUT PLUGİNLER ({requiredPlugins.length})</span>
+
+                    <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1">
+                      {requiredPlugins.map((plugin) => (
+                        <div
+                          key={plugin.id}
+                          className={`p-3.5 rounded-xl border flex items-center justify-between gap-4 text-left ${
+                            darkMode ? 'bg-[#0f0f11] border-neutral-850' : 'bg-white border-neutral-200 shadow-sm'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-lg bg-amber-500 text-white flex items-center justify-center font-mono text-xs font-black">
+                              PL
+                            </div>
+                            <div className="flex flex-col">
+                              <span className={`text-xs font-bold ${darkMode ? 'text-white' : 'text-neutral-800'}`}>
+                                {plugin.name}
+                              </span>
+                              <span className="text-[9.5px] font-mono text-neutral-500 mt-0.5">
+                                KATEGORİ: <span className="text-amber-500 uppercase">{plugin.category}</span> • GEREKSİNİM: {plugin.requirements || 'Belirtilmemiş'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              onClick={() => startEditingPlugin(plugin)}
+                              className={`p-2 rounded-lg border transition-colors cursor-pointer ${
+                                darkMode ? 'border-neutral-800 hover:bg-neutral-850 text-neutral-400 hover:text-white' : 'border-neutral-200 hover:bg-neutral-100 text-neutral-600'
+                              }`}
+                              title="Düzenle"
+                            >
+                              <LucideIcons.Edit2 className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              onClick={() => handleDeletePlugin(plugin.id)}
+                              className="p-2 rounded-lg border border-red-500/10 hover:bg-red-500/10 text-neutral-500 hover:text-red-500 transition-colors cursor-pointer"
+                              title="Sil"
+                            >
+                              <LucideIcons.Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* TAB 5: FEEDBACK (REPORT & SUGGESTION) */}
               {activeTab === 'feedback' && (
                 <div className="flex flex-col gap-6 animate-fade-in text-left">
@@ -2334,7 +2657,8 @@ export default function AdminPanel({
               )}
             </div>
           </div>
-        )}
+        </div>
+      )}
       </div>
     </div>
   );
