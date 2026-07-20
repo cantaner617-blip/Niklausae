@@ -192,12 +192,14 @@ export default function AdminPanel({
 
       if (resendApiKey) {
         logText += `[Resend API] Kampanya bülteni API üzerinden toplu iletiliyor...\n`;
-        const res = await fetch('/api/send-email', {
+        const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${resendApiKey}`
           },
           body: JSON.stringify({
+            from: 'Pars Mazi Edit Archive <noreply@resend.dev>',
             to: emails,
             subject: customCampaignSubject,
             html: `
