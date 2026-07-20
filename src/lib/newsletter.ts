@@ -257,15 +257,13 @@ export const notifySubscribersOfNewEffect = async (
   if (resendApiKey) {
     logs += `[Resend API] Abonelere toplu mail gönderimi başlatılıyor...\n`;
     try {
-      // Loop or send via Resend (Note: client-side requests might get CORS blocked by Resend, so we do it as robustly as possible)
-      const response = await fetch('https://api.resend.com/emails', {
+      // Send via our backend proxy route to avoid CORS limitations on the client side
+      const response = await fetch('/api/send-email', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${resendApiKey}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          from: 'Pars Mazi Edit Archive <noreply@resend.dev>',
           to: emails,
           subject: subject,
           html: htmlBody,
@@ -276,7 +274,7 @@ export const notifySubscribersOfNewEffect = async (
         emailSentSuccessful = true;
       } else {
         const errorText = await response.text();
-        logs += `[Resend API] Hata (CORS veya Kimlik Doğrulama): ${errorText}\n`;
+        logs += `[Resend API] Hata (Sunucu): ${errorText}\n`;
       }
     } catch (err: any) {
       logs += `[Resend API] Başarısız: ${err?.message || err}\n`;
