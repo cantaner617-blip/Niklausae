@@ -74,6 +74,34 @@ export interface GeneralSettings {
   creatorPortrait?: string;
 }
 
+export const fetchAdminPasswordFromFirebase = async (): Promise<string | null> => {
+  if (!isFirebaseConfigured()) return null;
+  try {
+    const dbInstance = getFirebaseDB();
+    const docRef = doc(dbInstance, 'settings', 'security');
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data().adminPassword || null;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching admin password from Firebase:", error);
+    return null;
+  }
+};
+
+export const saveAdminPasswordToFirebase = async (password: string): Promise<void> => {
+  if (!isFirebaseConfigured()) return;
+  try {
+    const dbInstance = getFirebaseDB();
+    const docRef = doc(dbInstance, 'settings', 'security');
+    await setDoc(docRef, { adminPassword: password });
+  } catch (error) {
+    console.error("Error saving admin password to Firebase:", error);
+    throw error;
+  }
+};
+
 export const fetchGeneralSettings = async (): Promise<GeneralSettings | null> => {
   if (!isFirebaseConfigured()) return null;
   try {

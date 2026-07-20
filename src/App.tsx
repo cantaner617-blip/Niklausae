@@ -9,6 +9,8 @@ import CreatorProfile from './components/CreatorProfile';
 import FeedbackForm from './components/FeedbackForm';
 import CategoryDetail from './components/CategoryDetail';
 import AdminPanel from './components/AdminPanel';
+import AnnouncementBanner from './components/AnnouncementBanner';
+import NewsletterSubscription from './components/NewsletterSubscription';
 import { CATEGORIES, EFFECT_ITEMS } from './data';
 import { EffectItem, Category } from './types';
 import { MessageSquare, ExternalLink, Megaphone, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -606,76 +608,16 @@ export default function App() {
         )}
 
         {/* Active Announcement Carousel */}
-        {activeAnnouncements.length > 0 && !selectedCategoryId && (
-          <div
-            onMouseEnter={() => setIsAnnHovered(true)}
-            onMouseLeave={() => setIsAnnHovered(false)}
-            className={`w-full relative py-3 px-4 rounded-2xl border transition-all duration-300 flex items-center justify-between gap-3.5 group/ann ${
-              getAnnouncementStyles(activeAnn.type).bgColor
-            } ${activeAnn.link ? 'cursor-pointer hover:scale-[1.005] hover:shadow-md active:scale-[0.995]' : ''}`}
-            onClick={() => handleAnnouncementClick(activeAnn)}
-            title={activeAnn.link ? 'Bağlantıyı açmak için tıklayın' : undefined}
-          >
-            <div className="flex items-center gap-3.5 flex-1 min-w-0">
-              <div className={`p-1.5 rounded-lg text-white shrink-0 flex items-center justify-center shadow-sm ${
-                getAnnouncementStyles(activeAnn.type).badgeBg
-              }`}>
-                {getAnnouncementStyles(activeAnn.type).icon}
-              </div>
-              
-              <div className="flex-1 min-w-0 flex flex-col text-left">
-                <span className="font-bold text-xs leading-relaxed tracking-wide truncate sm:whitespace-normal">
-                  {activeAnn.text}
-                </span>
-                {activeAnn.link && (
-                  <span className="text-[9px] opacity-70 font-semibold flex items-center gap-1 mt-0.5 animate-pulse">
-                    <ExternalLink className="w-2.5 h-2.5" /> Gitmek için tıklayın
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Carousel navigation controls */}
-            {activeAnnouncements.length > 1 && (
-              <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation(); // prevent triggering the link click
-                    setCurrentAnnIndex((prev) => (prev - 1 + activeAnnouncements.length) % activeAnnouncements.length);
-                  }}
-                  className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
-                    darkMode 
-                      ? 'bg-neutral-900/60 hover:bg-neutral-800 text-neutral-400 hover:text-white border border-neutral-800/80' 
-                      : 'bg-white/80 hover:bg-white text-neutral-600 hover:text-neutral-950 border border-neutral-200'
-                  }`}
-                  title="Önceki Duyuru"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </button>
-
-                <span className="text-[10px] font-mono font-bold select-none opacity-60 min-w-[28px] text-center">
-                  {currentAnnIndex + 1}/{activeAnnouncements.length}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation(); // prevent triggering the link click
-                    setCurrentAnnIndex((prev) => (prev + 1) % activeAnnouncements.length);
-                  }}
-                  className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
-                    darkMode 
-                      ? 'bg-neutral-900/60 hover:bg-neutral-800 text-neutral-400 hover:text-white border border-neutral-800/80' 
-                      : 'bg-white/80 hover:bg-white text-neutral-600 hover:text-neutral-950 border border-neutral-200'
-                  }`}
-                  title="Sonraki Duyuru"
-                >
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-          </div>
+        {!selectedCategoryId && activeAnnouncements.length > 0 && (
+          <AnnouncementBanner
+            darkMode={darkMode}
+            activeAnnouncements={activeAnnouncements}
+            currentAnnIndex={currentAnnIndex}
+            setCurrentAnnIndex={setCurrentAnnIndex}
+            onAnnouncementClick={handleAnnouncementClick}
+            isAnnHovered={isAnnHovered}
+            setIsAnnHovered={setIsAnnHovered}
+          />
         )}
 
         {selectedCategoryId ? (
@@ -749,12 +691,15 @@ export default function App() {
                 
                 <div className="flex flex-col items-start leading-tight text-left">
                   <span className="text-sm tracking-tight font-black">Efekt Eklemek İstiyorum</span>
-                  <span className="text-[10.5px] text-neutral-500 font-medium mt-0.5">Topluluğumuza katılın, arşivimizi birlikte büyütelim</span>
+                  <span className="text-[10px] text-neutral-500 font-medium mt-0.5">Topluluğumuza katılın, arşivimizi birlikte büyütelim</span>
                 </div>
                 
                 <ExternalLink className="w-4 h-4 text-neutral-500 group-hover:text-[#5865F2] group-hover:translate-x-0.5 transition-transform ml-auto" />
               </a>
             </section>
+
+            {/* Newsletter Subscription section */}
+            <NewsletterSubscription darkMode={darkMode} />
 
             {/* Creator profile bio */}
             <CreatorProfile 

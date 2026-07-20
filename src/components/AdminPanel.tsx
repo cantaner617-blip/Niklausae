@@ -11,8 +11,11 @@ import {
   saveAnnouncementToFirebase,
   deleteAnnouncementFromFirebase,
   subscribeToAnnouncements,
-  setVisitorCountInFirebase
+  setVisitorCountInFirebase,
+  fetchAdminPasswordFromFirebase,
+  saveAdminPasswordToFirebase
 } from '../lib/firebase';
+import { notifySubscribersOfNewEffect } from '../lib/newsletter';
 
 interface AdminPanelProps {
   darkMode: boolean;
@@ -116,8 +119,172 @@ export default function AdminPanel({
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
 
   // Active Navigation Tab
-  const [activeTab, setActiveTab] = useState<'settings' | 'announcements' | 'categories' | 'effects'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'announcements' | 'categories' | 'effects' | 'subscribers'>('settings');
   const [settingsSubTab, setSettingsSubTab] = useState<'site' | 'profile' | 'social'>('site');
+
+  // Newsletter & Subscribers State
+  const [subscribers, setSubscribers] = useState<any[]>([]);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [subscriberSearch, setSubscriberSearch] = useState('');
+  const [customCampaignSubject, setCustomCampaignSubject] = useState('');
+  const [customCampaignBody, setCustomCampaignBody] = useState('');
+  const [isSendingCampaign, setIsSendingCampaign] = useState(false);
+  const [campaignLogs, setCampaignLogs] = useState('');
+  const [campaignSuccess, setCampaignSuccess] = useState(false);
+
+  // Load subscribers and campaigns history when Bulletin tab is selected
+  useEffect(() => {
+    if (activeTab === 'subscribers') {
+      const loadNewsletterData = async () => {
+        try {
+          const { fetchSubscribers, fetchCampaigns } = await import('../lib/newsletter');
+          const subs = await fetchSubscribers();
+          const camps = await fetchCampaigns();
+          setSubscribers(subs);
+          setCampaigns(camps);
+        } catch (e) {
+          console.error("Error loading newsletter data:", e);
+        }
+      };
+      loadNewsletterData();
+    }
+  }, [activeTab]);
+
+  const handleDeleteSubscriber = async (email: string) => {
+    if (!confirm(`${email} adresini bültenden silmek istediğinize emin misiniz?`)) return;
+    try {
+      const { unsubscribeEmail } = await import('../lib/newsletter');
+      const success = await unsubscribeEmail(email);
+      if (success) {
+        setSubscribers(prev => prev.filter(s => s.email !== email));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleSendCustomCampaign = async () => {
+    if (!customCampaignSubject.trim() || !customCampaignBody.trim()) {
+      alert('Lütfen konu ve içerik alanlarını doldurun!');
+      return;
+    }
+    if (subscribers.length === 0) {
+      alert('Gönderilecek kayıtlı abone bulunmuyor.');
+      return;
+    }
+
+    setIsSendingCampaign(true);
+    setCampaignLogs('İletim süreci başlatılıyor...\n');
+    setCampaignSuccess(false);
+
+    try {
+      const { logCampaign } = await import('../lib/newsletter');
+      const emails = subscribers.map(s => s.email);
+      let logText = `Alıcı listesi doğrulandı (${emails.length} aktif e-posta).\n`;
+
+      const resendApiKey = import.meta.env.VITE_RESEND_API_KEY;
+      const emailjsServiceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+      const emailjsTemplateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+      const emailjsPublicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+
+      let sendSuccess = false;
+
+      if (resendApiKey) {
+        logText += `[Resend API] Kampanya bülteni API üzerinden toplu iletiliyor...\n`;
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${resendApiKey}`
+          },
+          body: JSON.stringify({
+            from: 'Pars Mazi Edit Archive <noreply@resend.dev>',
+            to: emails,
+            subject: customCampaignSubject,
+            html: `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; background-color: #0d0d11; color: #ffffff; border-radius: 16px; border: 1px solid #22222a;">
+                <div style="text-align: center; border-bottom: 1px solid #22222a; padding-bottom: 15px; margin-bottom: 25px;">
+                  <h1 style="color: #8b5cf6; margin: 0; font-size: 24px; letter-spacing: 2px;">PARS MAZI</h1>
+                  <p style="color: #8e9099; margin: 5px 0 0 0; font-size: 11px; letter-spacing: 1px;">PRESET & EDIT ARCHIVE</p>
+                </div>
+                <h2 style="color: #f4f4f5; font-size: 18px; margin-bottom: 15px;">${customCampaignSubject}</h2>
+                <div style="white-space: pre-wrap; font-size: 14px; color: #d4d4d8; line-height: 1.6; margin-bottom: 25px;">${customCampaignBody}</div>
+                <div style="text-align: center; border-top: 1px solid #22222a; padding-top: 15px; margin-top: 25px;">
+                  <p style="font-size: 11px; color: #71717a; margin: 0;">Bu e-posta Pars Mazi bülten üyelerine gönderilmiştir.</p>
+                  <p style="font-size: 11px; color: #71717a; margin: 5px 0 0 0;">Abonelikten çıkmak için sitemizi ziyaret edebilirsiniz.</p>
+                </div>
+              </div>
+            `
+          })
+        });
+        if (res.ok) {
+          logText += `[Resend API] Başarıyla ${emails.length} aboneye teslim edildi.\n`;
+          sendSuccess = true;
+        } else {
+          logText += `[Resend API] Gönderim hatası: ${await res.text()}\n`;
+        }
+      }
+
+      // Fallback via EmailJS sequence
+      if (!sendSuccess && emailjsServiceId && emailjsTemplateId && emailjsPublicKey) {
+        logText += `[EmailJS] Alıcılara sırayla kampanya gönderiliyor...\n`;
+        for (const email of emails) {
+          await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              service_id: emailjsServiceId,
+              template_id: emailjsTemplateId,
+              user_id: emailjsPublicKey,
+              template_params: {
+                to_email: email,
+                subject: customCampaignSubject,
+                message_html: `
+                  <div style="font-family: sans-serif; background-color: #0d0d11; color: #ffffff; padding: 25px; border-radius: 16px; border: 1px solid #22222a;">
+                    <h2 style="color: #8b5cf6;">${customCampaignSubject}</h2>
+                    <div style="white-space: pre-wrap; font-size: 14px; color: #d4d4d8; line-height: 1.6;">${customCampaignBody}</div>
+                  </div>
+                `
+              }
+            })
+          });
+        }
+        logText += `[EmailJS] Başarıyla ${emails.length} aboneye teslim edildi.\n`;
+        sendSuccess = true;
+      }
+
+      if (!sendSuccess) {
+        logText += `[Test Modu] API anahtarı girilmediği için tarayıcı konsolunda simüle edildi.\n`;
+        console.log("%c[Manuel Bülten Gönderimi]", "color: #10b981; font-weight: bold; font-size: 14px;", {
+          subject: customCampaignSubject,
+          body: customCampaignBody,
+          recipients: emails
+        });
+        sendSuccess = true;
+      }
+
+      if (sendSuccess) {
+        const newCamp = {
+          subject: customCampaignSubject,
+          body: customCampaignBody.substring(0, 80) + (customCampaignBody.length > 80 ? '...' : ''),
+          sentAt: new Date().toISOString(),
+          targetCount: emails.length
+        };
+        await logCampaign(newCamp);
+        setCampaigns(prev => [newCamp, ...prev]);
+        setCustomCampaignSubject('');
+        setCustomCampaignBody('');
+        setCampaignSuccess(true);
+        logText += `\n✨ Kampanya iletimi başarıyla tamamlandı!`;
+      }
+      setCampaignLogs(logText);
+    } catch (err: any) {
+      console.error(err);
+      setCampaignLogs(prev => prev + `\nHata oluştu: ${err?.message || err}`);
+    } finally {
+      setIsSendingCampaign(false);
+    }
+  };
 
   // Announcements State
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -184,6 +351,18 @@ export default function AdminPanel({
       });
     }
 
+    // Fetch synchronized admin password from Firebase if configured
+    if (isFirebaseConfigured()) {
+      fetchAdminPasswordFromFirebase().then((remotePassword) => {
+        if (remotePassword) {
+          setAdminPassword(remotePassword);
+          localStorage.setItem('pars_mazi_admin_password', remotePassword);
+        }
+      }).catch((err) => {
+        console.error("Error fetching admin password on mount:", err);
+      });
+    }
+
     // Check if previously authenticated in this session
     const storedAuth = sessionStorage.getItem('pars_mazi_admin_authed');
     if (storedAuth === 'true') {
@@ -202,9 +381,24 @@ export default function AdminPanel({
   };
 
   // Login handler
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === adminPassword || password === 'admin') {
+    
+    let currentPassword = adminPassword;
+    if (isFirebaseConfigured()) {
+      try {
+        const remotePassword = await fetchAdminPasswordFromFirebase();
+        if (remotePassword) {
+          currentPassword = remotePassword;
+          setAdminPassword(remotePassword);
+          localStorage.setItem('pars_mazi_admin_password', remotePassword);
+        }
+      } catch (err) {
+        console.error("Error fetching latest admin password on login:", err);
+      }
+    }
+
+    if (password === currentPassword || password === 'admin') {
       setIsAuthenticated(true);
       sessionStorage.setItem('pars_mazi_admin_authed', 'true');
       setAuthError('');
@@ -577,6 +771,17 @@ export default function AdminPanel({
       } else {
         setEffects([newEff, ...effects]);
       }
+
+      // Notify Newsletter Subscribers of New Effect addition
+      const cat = categories.find(c => c.id === effectCategoryId);
+      const catName = cat ? cat.titleTr : 'Genel';
+      notifySubscribersOfNewEffect(effectName, catName, effectAuthor || 'Pars Mazi')
+        .then((res) => {
+          console.log(`Newsletter notified. Targets: ${res.targetCount}. Logs:\n`, res.logs);
+        })
+        .catch((err) => {
+          console.error("Newsletter notification error:", err);
+        });
     }
 
     // Reset Form
@@ -755,6 +960,7 @@ export default function AdminPanel({
                 { id: 'announcements', label: 'DUYURU SİSTEMİ', icon: 'Megaphone' },
                 { id: 'categories', label: 'KATEGORİLER', icon: 'Layout' },
                 { id: 'effects', label: 'EFEKT KÜTÜPHANESİ', icon: 'Layers' },
+                { id: 'subscribers', label: 'BÜLTEN & ABONELER', icon: 'Mail' },
               ].map((tab) => {
                 const IconComp = (LucideIcons as any)[tab.icon] || LucideIcons.File;
                 const isActive = activeTab === tab.id;
@@ -1029,11 +1235,25 @@ export default function AdminPanel({
                           </div>
                           <button
                             type="button"
-                            onClick={() => {
+                            onClick={async () => {
                               if (!newPasswordInput.trim()) return;
-                              localStorage.setItem('pars_mazi_admin_password', newPasswordInput.trim());
-                              setAdminPassword(newPasswordInput.trim());
-                              setPasswordChangeSuccess('Şifre başarıyla güncellendi: ' + newPasswordInput.trim());
+                              const trimmedPwd = newPasswordInput.trim();
+                              
+                              localStorage.setItem('pars_mazi_admin_password', trimmedPwd);
+                              setAdminPassword(trimmedPwd);
+                              
+                              if (isFirebaseConfigured()) {
+                                try {
+                                  await saveAdminPasswordToFirebase(trimmedPwd);
+                                  setPasswordChangeSuccess('Şifre başarıyla güncellendi ve bulut veritabanına kaydedildi: ' + trimmedPwd);
+                                } catch (e) {
+                                  console.error("Error saving password to Firebase:", e);
+                                  setPasswordChangeSuccess('Şifre yerel olarak güncellendi ancak bulut veritabanına kaydedilemedi: ' + (e as Error).message);
+                                }
+                              } else {
+                                setPasswordChangeSuccess('Şifre başarıyla yerel olarak güncellendi: ' + trimmedPwd);
+                              }
+                              
                               setNewPasswordInput('');
                               setTimeout(() => setPasswordChangeSuccess(''), 4000);
                             }}
@@ -1864,6 +2084,223 @@ export default function AdminPanel({
                           </div>
                         );
                       })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 5: NEWSLETTER & SUBSCRIBERS */}
+              {activeTab === 'subscribers' && (
+                <div className="flex flex-col gap-6 animate-fade-in text-left">
+                  <div className="flex flex-col leading-tight border-b border-neutral-800/40 pb-3">
+                    <h3 className="text-base font-black uppercase tracking-tight">E-Posta Bülten & Abone Yönetimi</h3>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">Aboneleri görüntüleyin, manuel kampanya mailleri gönderin ve gönderim geçmişini takip edin.</p>
+                  </div>
+
+                  {/* API Configuration Status Banner */}
+                  <div className={`p-3.5 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs leading-relaxed ${
+                    (import.meta.env.VITE_RESEND_API_KEY || import.meta.env.VITE_EMAILJS_PUBLIC_KEY)
+                      ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'
+                      : 'bg-amber-500/5 border-amber-500/20 text-amber-400'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <LucideIcons.KeyRound className="w-4.5 h-4.5 shrink-0" />
+                      <div>
+                        <span className="font-bold">E-Posta Servis Durumu:</span>{' '}
+                        {import.meta.env.VITE_RESEND_API_KEY ? (
+                          <span>Resend API Entegrasyonu Aktif (Üretim Modu)</span>
+                        ) : import.meta.env.VITE_EMAILJS_PUBLIC_KEY ? (
+                          <span>EmailJS Entegrasyonu Aktif (Üretim Modu)</span>
+                        ) : (
+                          <span>Entegrasyon Yok (Geliştirici/Test Simülasyon Modu)</span>
+                        )}
+                      </div>
+                    </div>
+                    {!(import.meta.env.VITE_RESEND_API_KEY || import.meta.env.VITE_EMAILJS_PUBLIC_KEY) && (
+                      <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 font-bold self-start sm:self-auto shrink-0">
+                        SIMULE EDILIR
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className={`p-4 rounded-xl border flex items-center gap-4 ${
+                      darkMode ? 'bg-[#0f0f11] border-neutral-850' : 'bg-neutral-50 border-neutral-200'
+                    }`}>
+                      <div className="p-3 rounded-lg bg-violet-600/10 text-violet-400">
+                        <LucideIcons.Users className="w-5 h-5" />
+                      </div>
+                      <div className="flex flex-col text-left">
+                        <span className="text-lg font-black">{subscribers.length}</span>
+                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Kayıtlı Abone Sayısı</span>
+                      </div>
+                    </div>
+
+                    <div className={`p-4 rounded-xl border flex items-center gap-4 ${
+                      darkMode ? 'bg-[#0f0f11] border-neutral-850' : 'bg-neutral-50 border-neutral-200'
+                    }`}>
+                      <div className="p-3 rounded-lg bg-blue-600/10 text-blue-400">
+                        <LucideIcons.History className="w-5 h-5" />
+                      </div>
+                      <div className="flex flex-col text-left">
+                        <span className="text-lg font-black">{campaigns.length}</span>
+                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Gönderilen Bülten Kampanyası</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    {/* Left Column: Manual Email Campaign Sender (7 cols) */}
+                    <div className="lg:col-span-7 flex flex-col gap-4">
+                      <div className={`p-5 rounded-2xl border flex flex-col gap-4 ${
+                        darkMode ? 'bg-[#0c0c0e] border-neutral-850' : 'bg-white border-neutral-200 shadow-sm'
+                      }`}>
+                        <span className="text-[10px] font-black uppercase text-neutral-500 font-mono">Manuel Bülten Kampanyası Oluştur</span>
+                        
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-black uppercase text-neutral-400">Kampanya Konusu / E-Posta Başlığı</label>
+                          <input
+                            type="text"
+                            value={customCampaignSubject}
+                            onChange={(e) => setCustomCampaignSubject(e.target.value)}
+                            placeholder="Örn: Pars Mazi Yeni Renk Ayarları (CC) Yayında!"
+                            className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                              darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                            }`}
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-black uppercase text-neutral-400">E-Posta İçerik Metni</label>
+                          <textarea
+                            value={customCampaignBody}
+                            onChange={(e) => setCustomCampaignBody(e.target.value)}
+                            placeholder="Abonelerinize iletmek istediğiniz mesajınızı buraya yazın..."
+                            rows={6}
+                            className={`py-2.5 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 resize-none leading-relaxed ${
+                              darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                            }`}
+                          />
+                        </div>
+
+                        <button
+                          onClick={handleSendCustomCampaign}
+                          disabled={isSendingCampaign}
+                          className="w-full py-3 bg-violet-600 hover:bg-violet-700 text-white text-xs font-black rounded-xl uppercase tracking-wider shadow-lg shadow-violet-600/10 flex items-center justify-center gap-2 active:scale-[0.99] transition-all cursor-pointer border-none"
+                        >
+                          {isSendingCampaign ? (
+                            <>
+                              <LucideIcons.Loader2 className="w-4 h-4 animate-spin" />
+                              Gönderiliyor...
+                            </>
+                          ) : (
+                            <>
+                              <LucideIcons.Send className="w-3.5 h-3.5" />
+                              Bülteni Gönder
+                            </>
+                          )}
+                        </button>
+
+                        {/* Live Delivery Terminal Logs */}
+                        {campaignLogs && (
+                          <div className="flex flex-col gap-1.5 mt-2">
+                            <span className="text-[9px] font-black uppercase text-neutral-500 font-mono">Gönderim İletim Terminal Logu</span>
+                            <pre className="p-3 rounded-lg bg-[#050507] border border-neutral-850/80 font-mono text-[10px] text-zinc-400 overflow-x-auto max-h-[140px] leading-relaxed text-left">
+                              {campaignLogs}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right Column: Subscribers List (5 cols) */}
+                    <div className="lg:col-span-5 flex flex-col gap-4">
+                      {/* Subscriber List Card */}
+                      <div className={`p-5 rounded-2xl border flex flex-col gap-4 ${
+                        darkMode ? 'bg-[#0c0c0e] border-neutral-850' : 'bg-white border-neutral-200 shadow-sm'
+                      }`}>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-[10px] font-black uppercase text-neutral-500 font-mono">Abone Listesi ({subscribers.length})</span>
+                          <div className="relative flex items-center w-28 sm:w-40">
+                            <LucideIcons.Search className="absolute left-2.5 w-3.5 h-3.5 text-neutral-500" />
+                            <input
+                              type="text"
+                              value={subscriberSearch}
+                              onChange={(e) => setSubscriberSearch(e.target.value)}
+                              placeholder="Ara..."
+                              className={`py-1.5 pl-8 pr-3 rounded-lg border text-[10.5px] w-full focus:outline-none ${
+                                darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
+                          {subscribers.filter(s => s.email.includes(subscriberSearch.toLowerCase())).length === 0 ? (
+                            <p className="text-neutral-500 text-center py-6 text-xs">Aranan kriterde abone bulunamadı.</p>
+                          ) : (
+                            subscribers
+                              .filter(s => s.email.includes(subscriberSearch.toLowerCase()))
+                              .map((sub) => (
+                                <div
+                                  key={sub.email}
+                                  className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 text-left ${
+                                    darkMode ? 'bg-[#0f0f11] border-neutral-850/60' : 'bg-neutral-50 border-neutral-200/60'
+                                  }`}
+                                >
+                                  <div className="flex flex-col min-w-0">
+                                    <span className={`text-[11px] font-bold truncate ${darkMode ? 'text-zinc-200' : 'text-neutral-800'}`}>
+                                      {sub.email}
+                                    </span>
+                                    <span className="text-[8.5px] font-mono text-neutral-500 mt-0.5 uppercase">
+                                      KAYIT: {new Date(sub.subscribedAt).toLocaleDateString('tr-TR')}
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={() => handleDeleteSubscriber(sub.email)}
+                                    className="p-1.5 rounded-lg border border-red-500/10 hover:bg-red-500/10 text-neutral-500 hover:text-red-500 transition-colors cursor-pointer shrink-0"
+                                    title="Aboneliği Sonlandır"
+                                  >
+                                    <LucideIcons.Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Campaigns History logs list card */}
+                      <div className={`p-5 rounded-2xl border flex flex-col gap-4 ${
+                        darkMode ? 'bg-[#0c0c0e] border-neutral-850' : 'bg-white border-neutral-200 shadow-sm'
+                      }`}>
+                        <span className="text-[10px] font-black uppercase text-neutral-500 font-mono text-left">Gönderilen Kampanya Geçmişi</span>
+                        <div className="flex flex-col gap-2.5 max-h-[180px] overflow-y-auto pr-1">
+                          {campaigns.length === 0 ? (
+                            <p className="text-neutral-500 text-center py-4 text-xs">Henüz geçmiş bülten bulunmuyor.</p>
+                          ) : (
+                            campaigns.map((camp, idx) => (
+                              <div
+                                key={idx}
+                                className={`p-3 rounded-xl border text-left flex flex-col gap-1.5 ${
+                                  darkMode ? 'bg-[#0f0f11] border-neutral-850/40' : 'bg-neutral-50 border-neutral-200/40'
+                                }`}
+                              >
+                                <span className={`text-xs font-bold ${darkMode ? 'text-zinc-200' : 'text-neutral-800'}`}>
+                                  {camp.subject}
+                                </span>
+                                <p className="text-[10px] text-neutral-500 leading-normal line-clamp-2">
+                                  {camp.body}
+                                </p>
+                                <div className="flex items-center justify-between text-[8.5px] font-mono text-neutral-500 border-t border-neutral-850/40 pt-1.5 mt-0.5">
+                                  <span>Tarih: {new Date(camp.sentAt).toLocaleDateString('tr-TR')}</span>
+                                  <span className="text-violet-400 font-bold">{camp.targetCount} ALICI</span>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
