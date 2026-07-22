@@ -520,7 +520,12 @@ export default function AdminPanel({
           await saveAnnouncementToFirebase(ann);
         }
 
-        alert('Tebrikler! Tüm verileriniz (Kategoriler, Efektler, Duyurular ve Ayarlar) başarıyla Firebase bulut veritabanınıza yüklendi! Sitenizin tüm ziyaretçileri bu güncel verileri canlı olarak görecek.');
+        // 5. Required Plugins
+        for (const plugin of requiredPlugins) {
+          await savePluginToFirebase(plugin);
+        }
+
+        alert('Tebrikler! Tüm verileriniz (Kategoriler, Efektler, Eklentiler, Duyurular ve Ayarlar) başarıyla Firebase bulut veritabanınıza yüklendi! Sitenizin tüm ziyaretçileri bu güncel verileri canlı olarak görecek.');
       } catch (e) {
         console.error(e);
         alert('Veriler aktarılırken bir hata oluştu: ' + (e as Error).message);
@@ -647,6 +652,8 @@ export default function AdminPanel({
     if (isFirebaseConfigured()) {
       try {
         await deleteAnnouncementFromFirebase(id);
+        const filtered = announcements.filter(ann => ann.id !== id);
+        saveAnnouncements(filtered);
       } catch (e) {
         console.error("Firebase announcement delete error:", e);
       }
@@ -731,6 +738,10 @@ export default function AdminPanel({
           for (const eff of associatedEffects) {
             await deleteEffectFromFirebase(eff.id);
           }
+          const filteredCats = categories.filter(cat => cat.id !== id);
+          const filteredEffects = effects.filter(eff => eff.categoryId !== id);
+          setCategories(filteredCats);
+          setEffects(filteredEffects);
         } catch (e) {
           console.error("Firebase category/effects delete error:", e);
         }
@@ -821,6 +832,8 @@ export default function AdminPanel({
       if (isFirebaseConfigured()) {
         try {
           await deletePluginFromFirebase(id);
+          const filtered = requiredPlugins.filter(p => p.id !== id);
+          setRequiredPlugins(filtered);
         } catch (e) {
           console.error("Firebase plugin delete error:", e);
         }
@@ -936,6 +949,7 @@ export default function AdminPanel({
       if (isFirebaseConfigured()) {
         try {
           await deleteEffectFromFirebase(id);
+          setEffects(effects.filter(eff => eff.id !== id));
         } catch (e) {
           console.error("Firebase effect delete error:", e);
         }

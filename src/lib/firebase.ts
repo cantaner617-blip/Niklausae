@@ -13,6 +13,7 @@ import {
   updateDoc
 } from 'firebase/firestore';
 import { Category, EffectItem, FeedbackSubmission, RequiredPlugin } from '../types';
+import { CATEGORIES, EFFECT_ITEMS, REQUIRED_PLUGINS } from '../data';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyA48AM49MOvEHzD9BHsV1Df7HtVBVtzMUw",
@@ -243,6 +244,21 @@ export const subscribeToGeneralSettings = (callback: (settings: GeneralSettings)
   try {
     const dbInstance = getFirebaseDB();
     const docRef = doc(dbInstance, 'settings', 'general');
+
+    // Check if the database is completely empty/unseeded, and auto-seed if so
+    getDoc(docRef).then(async (docSnap) => {
+      if (!docSnap.exists()) {
+        console.log("General settings document not found. Performing automatic database seeding...");
+        try {
+          await autoSeedDefaultData();
+        } catch (err) {
+          console.error("Auto seeding failed:", err);
+        }
+      }
+    }).catch(err => {
+      console.error("Error checking general settings for auto-seed:", err);
+    });
+
     return onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         callback(docSnap.data() as GeneralSettings);
@@ -525,6 +541,64 @@ export const deletePluginFromFirebase = async (id: string): Promise<void> => {
     await deleteDoc(docRef);
   } catch (error) {
     console.error("Error deleting plugin from Firebase:", error);
+    throw error;
+  }
+};
+
+export const autoSeedDefaultData = async (): Promise<void> => {
+  if (!isFirebaseConfigured()) return;
+  try {
+    const dbInstance = getFirebaseDB();
+    
+    // 1. General Settings
+    const settingsDoc = doc(dbInstance, 'settings', 'general');
+    await setDoc(settingsDoc, {
+      siteTitle: 'PARS MAZI',
+      siteSubtitle: 'EDIT PACK',
+      siteBadge: 'AFTER EFFECTS PACKS',
+      activeStatusTextState: '2,845 AKTİF EDİTÖR ÇEVRİMİÇİ',
+      discordUrl: 'https://discord.gg',
+      creatorName: 'PARS MAZI',
+      creatorTitle: 'VIDEO EDITOR • MOTION DESIGNER',
+      creatorBio: 'Merhaba! Ben Pars Mazi. 6 yılı aşkın süredir After Effects ve Premiere Pro platformlarında profesyonel video kurgu, 3D animasyon ve hareket tasarımı (motion design) yapıyorum.\n\nSiz editörler için hazırladığım bu canlı kütüphanede, kurgularınızı profesyonel seviyeye çıkaracak renk derecelendirmeleri (CC), pürüzsüz dikey/yatay shake\'ler, akıcı Twixtor yavaş çekim ayarları ve geçiş efektleri gibi her editörün arşivinde bulunması gereken en kaliteli hazır ayarları (presets) paylaşıyorum.',
+      creatorExperience: '6+',
+      creatorYoutube: 'https://youtube.com',
+      creatorInstagram: 'https://instagram.com',
+      creatorDiscord: 'https://discord.gg',
+      creatorTiktok: 'https://tiktok.com',
+      creatorPortrait: ''
+    });
+
+    // 2. Categories
+    for (const cat of CATEGORIES) {
+      const docRef = doc(dbInstance, 'categories', cat.id);
+      await setDoc(docRef, cat);
+    }
+
+    // 3. Effects
+    for (const eff of EFFECT_ITEMS) {
+      const docRef = doc(dbInstance, 'effects', eff.id);
+      await setDoc(docRef, eff);
+    }
+
+    // 4. Required Plugins
+    for (const plugin of REQUIRED_PLUGINS) {
+      const docRef = doc(dbInstance, 'plugins', plugin.id);
+      await setDoc(docRef, plugin);
+    }
+
+    // 5. Default Announcement
+    const annDoc = doc(dbInstance, 'announcements', 'default-1');
+    await setDoc(annDoc, {
+      id: 'default-1',
+      text: '🎉 YENİ GÜNCELLEME: Pars Mazi Edit Arşivi v2 Aktif Edildi! Tüm renk ayarları (CC) güncellendi.',
+      type: 'info',
+      active: true
+    } as Announcement);
+
+    console.log("Auto-seeding completed successfully!");
+  } catch (error) {
+    console.error("Error during auto-seeding:", error);
     throw error;
   }
 };

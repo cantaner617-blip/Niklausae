@@ -252,21 +252,21 @@ export default function App() {
 
     // Subscribe to Categories
     const unsubCategories = subscribeToCategories((firebaseCats) => {
-      if (firebaseCats && firebaseCats.length > 0) {
+      if (firebaseCats) {
         setCategories(firebaseCats);
       }
     });
 
     // Subscribe to Effects
     const unsubEffects = subscribeToEffects((firebaseEffects) => {
-      if (firebaseEffects && firebaseEffects.length > 0) {
+      if (firebaseEffects) {
         setEffects(firebaseEffects);
       }
     });
 
     // Subscribe to Plugins
     const unsubPlugins = subscribeToPlugins((firebasePlugins) => {
-      if (firebasePlugins && firebasePlugins.length > 0) {
+      if (firebasePlugins) {
         setRequiredPlugins(firebasePlugins);
       }
     });
