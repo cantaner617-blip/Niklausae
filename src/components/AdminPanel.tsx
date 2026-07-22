@@ -128,9 +128,16 @@ export default function AdminPanel({
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState('');
-  const [adminPassword, setAdminPassword] = useState<string>('pars123');
+  const [adminPassword, setAdminPassword] = useState<string>(() => {
+    return localStorage.getItem('pars_mazi_admin_password') || 'pars123';
+  });
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
+
+  // Persist admin password changes to localStorage
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_admin_password', adminPassword);
+  }, [adminPassword]);
 
   // Active Navigation Tab
   const [activeTab, setActiveTab] = useState<'settings' | 'announcements' | 'categories' | 'effects' | 'feedback' | 'plugins'>('settings');
