@@ -33,6 +33,26 @@ export const isFirebaseConfigured = (): boolean => {
   );
 };
 
+// Helper to recursively strip undefined values from objects before writing to Firestore
+export const cleanObject = <T extends any>(obj: T): T => {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(item => cleanObject(item)) as any;
+  }
+  if (typeof obj === 'object' && Object.getPrototypeOf(obj) === Object.prototype) {
+    const result: any = {};
+    for (const key of Object.keys(obj)) {
+      const val = (obj as any)[key];
+      if (val !== undefined) {
+        result[key] = cleanObject(val);
+      }
+    }
+    return result;
+  }
+  return obj;
+};
+
+
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
 
@@ -149,7 +169,7 @@ export const saveGeneralSettings = async (settings: GeneralSettings): Promise<vo
   try {
     const dbInstance = getFirebaseDB();
     const docRef = doc(dbInstance, 'settings', 'general');
-    await setDoc(docRef, settings);
+    await setDoc(docRef, cleanObject(settings));
   } catch (error) {
     console.error("Error saving general settings to Firebase:", error);
     throw error;
@@ -178,7 +198,7 @@ export const saveCategoryToFirebase = async (category: Category): Promise<void> 
   try {
     const dbInstance = getFirebaseDB();
     const docRef = doc(dbInstance, 'categories', category.id);
-    await setDoc(docRef, category);
+    await setDoc(docRef, cleanObject(category));
   } catch (error) {
     console.error("Error saving category to Firebase:", error);
     throw error;
@@ -219,7 +239,7 @@ export const saveEffectToFirebase = async (effect: EffectItem): Promise<void> =>
   try {
     const dbInstance = getFirebaseDB();
     const docRef = doc(dbInstance, 'effects', effect.id);
-    await setDoc(docRef, effect);
+    await setDoc(docRef, cleanObject(effect));
   } catch (error) {
     console.error("Error saving effect to Firebase:", error);
     throw error;
@@ -352,7 +372,7 @@ export const saveAnnouncementToFirebase = async (announcement: Announcement): Pr
   try {
     const dbInstance = getFirebaseDB();
     const docRef = doc(dbInstance, 'announcements', announcement.id);
-    await setDoc(docRef, announcement);
+    await setDoc(docRef, cleanObject(announcement));
   } catch (error) {
     console.error("Error saving announcement to Firebase:", error);
     throw error;
@@ -430,7 +450,7 @@ export const saveFeedbackToFirebase = async (feedback: FeedbackSubmission): Prom
   try {
     const dbInstance = getFirebaseDB();
     const docRef = doc(dbInstance, 'feedback', feedback.id);
-    await setDoc(docRef, feedback);
+    await setDoc(docRef, cleanObject(feedback));
   } catch (error) {
     console.error("Error saving feedback to Firebase:", error);
     throw error;
@@ -526,7 +546,7 @@ export const savePluginToFirebase = async (plugin: RequiredPlugin): Promise<void
   try {
     const dbInstance = getFirebaseDB();
     const docRef = doc(dbInstance, 'plugins', plugin.id);
-    await setDoc(docRef, plugin);
+    await setDoc(docRef, cleanObject(plugin));
   } catch (error) {
     console.error("Error saving plugin to Firebase:", error);
     throw error;
@@ -572,29 +592,29 @@ export const autoSeedDefaultData = async (): Promise<void> => {
     // 2. Categories
     for (const cat of CATEGORIES) {
       const docRef = doc(dbInstance, 'categories', cat.id);
-      await setDoc(docRef, cat);
+      await setDoc(docRef, cleanObject(cat));
     }
 
     // 3. Effects
     for (const eff of EFFECT_ITEMS) {
       const docRef = doc(dbInstance, 'effects', eff.id);
-      await setDoc(docRef, eff);
+      await setDoc(docRef, cleanObject(eff));
     }
 
     // 4. Required Plugins
     for (const plugin of REQUIRED_PLUGINS) {
       const docRef = doc(dbInstance, 'plugins', plugin.id);
-      await setDoc(docRef, plugin);
+      await setDoc(docRef, cleanObject(plugin));
     }
 
     // 5. Default Announcement
     const annDoc = doc(dbInstance, 'announcements', 'default-1');
-    await setDoc(annDoc, {
+    await setDoc(annDoc, cleanObject({
       id: 'default-1',
       text: '🎉 YENİ GÜNCELLEME: Pars Mazi Edit Arşivi v2 Aktif Edildi! Tüm renk ayarları (CC) güncellendi.',
       type: 'info',
       active: true
-    } as Announcement);
+    } as Announcement));
 
     console.log("Auto-seeding completed successfully!");
   } catch (error) {
