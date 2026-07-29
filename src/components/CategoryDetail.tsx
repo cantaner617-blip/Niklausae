@@ -305,6 +305,29 @@ function DetailEffectCard({
   const [downloadProgress, setDownloadProgress] = useState<number>(-1); // -1 is idle
   const [isDownloaded, setIsDownloaded] = useState<boolean>(false);
   const [downloadsCount, setDownloadsCount] = useState<number>(effect.downloads);
+  const [isHovered, setIsHovered] = useState<boolean>(false);
+
+  // Mouse follow coordinate tracker for Color Grading
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+    setCompareSliderPos(percentage);
+  };
+
+  // Loop transitions automatically while hovering
+  useEffect(() => {
+    if (!isHovered || category.id !== 'gecis-efektleri') return;
+    
+    // Play immediately on hover
+    triggerTransition();
+    
+    const interval = setInterval(() => {
+      triggerTransition();
+    }, 1800);
+    
+    return () => clearInterval(interval);
+  }, [isHovered, transitionScene]);
 
   // Trigger audio playback
   const handlePlayAudio = async () => {
@@ -449,7 +472,20 @@ function DetailEffectCard({
           
           {/* A. COLOR CORRECTIONS (CC Before/After Inline Comparison Slider) */}
           {category.id === 'renk-efektleri' && (
-            <div className="relative w-full h-full">
+            <div 
+              className="relative w-full h-full cursor-ew-resize group/cc"
+              onMouseMove={handleMouseMove}
+              onMouseLeave={() => setCompareSliderPos(50)}
+              onTouchMove={(e) => {
+                if (e.touches.length > 0) {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = e.touches[0].clientX - rect.left;
+                  const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+                  setCompareSliderPos(percentage);
+                }
+              }}
+              onTouchEnd={() => setCompareSliderPos(50)}
+            >
               {/* Graded Right side */}
               <div
                 className="absolute inset-0 w-full h-full bg-cover bg-center"
@@ -479,28 +515,28 @@ function DetailEffectCard({
               </div>
 
               {/* Slider Labels exactly like video overlay */}
-              <span className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm text-[8px] md:text-[9.5px] text-neutral-300 font-black px-2 py-0.5 rounded uppercase font-mono">
+              <span className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm text-[8px] md:text-[9.5px] text-neutral-300 font-black px-2 py-0.5 rounded uppercase font-mono select-none pointer-events-none">
                 ÖNCESİ
               </span>
-              <span className="absolute bottom-3 right-3 bg-purple-600/80 backdrop-blur-sm text-[8px] md:text-[9.5px] text-white font-black px-2 py-0.5 rounded uppercase font-mono">
+              <span className="absolute bottom-3 right-3 bg-purple-600/80 backdrop-blur-sm text-[8px] md:text-[9.5px] text-white font-black px-2 py-0.5 rounded uppercase font-mono select-none pointer-events-none">
                 SONRASI
               </span>
 
-              {/* Drag range input overlays full-width */}
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={compareSliderPos}
-                onChange={(e) => setCompareSliderPos(parseInt(e.target.value))}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-20"
-              />
+              {/* Hover overlay hint */}
+              <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md text-[8.5px] text-purple-300 font-black px-2.5 py-1 rounded border border-purple-500/20 uppercase tracking-widest pointer-events-none select-none opacity-0 group-hover/cc:opacity-100 transition-opacity duration-200 flex items-center gap-1.5 shadow-lg">
+                <LucideIcons.Eye className="w-3 h-3 animate-pulse" />
+                HIZLI KONTROL (FARE KULLANIN)
+              </div>
             </div>
           )}
 
           {/* B. SHAKES (Interactive Simulation) */}
           {category.id === 'shakeler' && (
-            <div className="relative w-full h-full bg-neutral-950 flex flex-col items-center justify-center">
+            <div 
+              className="relative w-full h-full bg-neutral-950 flex flex-col items-center justify-center cursor-pointer overflow-hidden group/shake"
+              onMouseEnter={() => setIsShaking(true)}
+              onMouseLeave={() => setIsShaking(false)}
+            >
               {/* Animated shake frame container */}
               <div
                 className={`w-full h-full bg-cover bg-center transition-transform duration-75 relative ${
@@ -515,7 +551,7 @@ function DetailEffectCard({
                     : ''
                 }`}
                 style={{
-                  backgroundImage: `url("https://picsum.photos/seed/animefight/800/450")`,
+                  backgroundImage: `url("https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80")`,
                 }}
               >
                 {/* Visual dark vignette ring */}
@@ -524,18 +560,28 @@ function DetailEffectCard({
 
               {/* Trigger test button overlay */}
               <button
-                onClick={triggerShake}
-                className="absolute py-2 px-4.5 rounded-full text-xs font-black tracking-tight flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white cursor-pointer shadow-lg hover:shadow-amber-500/20 active:scale-95 transition-all z-20"
+                onClick={(e) => { e.stopPropagation(); triggerShake(); }}
+                className="absolute py-2 px-4.5 rounded-full text-xs font-black tracking-tight flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white cursor-pointer shadow-lg hover:shadow-amber-500/20 active:scale-95 transition-all z-20 group-hover/shake:scale-105"
               >
                 <LucideIcons.Sparkles className="w-3.5 h-3.5 fill-current" />
-                SALLANTI EFEKTİNİ TEST ET
+                {isShaking ? 'SALLANTI AKTİF (KONTROLÜ BIRAKIN)' : 'SALLANTIYI TEST ET (HOVER)'}
               </button>
+
+              {/* Info Overlay Label */}
+              <div className="absolute top-3 left-3 bg-black/75 backdrop-blur-md text-[8.5px] text-amber-400 font-black px-2.5 py-1 rounded border border-amber-500/20 uppercase tracking-widest pointer-events-none select-none flex items-center gap-1.5 shadow-lg">
+                <LucideIcons.Activity className="w-3.5 h-3.5 animate-pulse" />
+                HIZLI ÖNİZLEME (HOVER)
+              </div>
             </div>
           )}
 
           {/* C. TWIXTOR SLOW-MOTION SIMULATOR */}
           {category.id === 'twixtor-ayarlari' && (
-            <div className="relative w-full h-full bg-[#050507] flex flex-col items-center justify-center p-6">
+            <div 
+              className="relative w-full h-full bg-[#050507] flex flex-col items-center justify-center p-6 cursor-pointer group/twixtor"
+              onMouseEnter={() => setIsSlowMo(true)}
+              onMouseLeave={() => setIsSlowMo(false)}
+            >
               {/* Motion space */}
               <div className="relative w-full max-w-sm aspect-video rounded-xl bg-neutral-950/80 overflow-hidden border border-neutral-850 flex items-center justify-center">
                 {/* Bouncing ball simulation indicating interpolation */}
@@ -555,18 +601,28 @@ function DetailEffectCard({
 
               {/* Simulation speed toggle */}
               <button
-                onClick={() => setIsSlowMo(!isSlowMo)}
-                className="absolute py-2 px-5 rounded-full text-xs font-black tracking-tight flex items-center gap-1.5 bg-teal-500 hover:bg-teal-600 text-white cursor-pointer shadow-lg active:scale-95 transition-all z-20"
+                onClick={(e) => { e.stopPropagation(); setIsSlowMo(!isSlowMo); }}
+                className="absolute py-2 px-5 rounded-full text-xs font-black tracking-tight flex items-center gap-1.5 bg-teal-500 hover:bg-teal-600 text-white cursor-pointer shadow-lg active:scale-95 transition-all z-20 group-hover/twixtor:scale-105"
               >
                 <LucideIcons.Activity className="w-3.5 h-3.5" />
-                {isSlowMo ? 'Normal Hıza Al' : 'Twixtor Slow-Mo Aç'}
+                {isSlowMo ? 'YAVAŞLATILDI (BIRAKIN)' : 'TWIXTOR AKTİFLEŞTİR (HOVER)'}
               </button>
+
+              {/* Info Overlay Label */}
+              <div className="absolute top-3 left-3 bg-black/75 backdrop-blur-md text-[8.5px] text-teal-400 font-black px-2.5 py-1 rounded border border-teal-500/20 uppercase tracking-widest pointer-events-none select-none flex items-center gap-1.5 shadow-lg">
+                <LucideIcons.Activity className="w-3.5 h-3.5 animate-pulse" />
+                HIZLI SİMÜLATÖR (HOVER)
+              </div>
             </div>
           )}
 
           {/* D. TRANSITION SIMULATOR */}
           {category.id === 'gecis-efektleri' && (
-            <div className="relative w-full h-full bg-neutral-950 flex flex-col items-center justify-center">
+            <div 
+              className="relative w-full h-full bg-neutral-950 flex flex-col items-center justify-center cursor-pointer group/trans"
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+            >
               {/* Transition viewport box */}
               <div className="relative w-full h-full overflow-hidden flex items-center justify-center">
                 {/* Scene A image */}
@@ -617,12 +673,18 @@ function DetailEffectCard({
 
               {/* Action play transition button */}
               <button
-                onClick={triggerTransition}
-                className="absolute py-2 px-5 rounded-full text-xs font-black tracking-tight flex items-center gap-1.5 bg-cyan-500 hover:bg-cyan-600 text-white cursor-pointer shadow-lg active:scale-95 transition-all z-20"
+                onClick={(e) => { e.stopPropagation(); triggerTransition(); }}
+                className="absolute py-2 px-5 rounded-full text-xs font-black tracking-tight flex items-center gap-1.5 bg-cyan-500 hover:bg-cyan-600 text-white cursor-pointer shadow-lg active:scale-95 transition-all z-20 group-hover/trans:scale-105"
               >
                 <LucideIcons.Sparkle className="w-3.5 h-3.5" />
-                Geçiş Efektini Oynat
+                {isHovered ? 'GEÇİŞLER DÖNGÜDE' : 'GEÇİŞİ TETİKLE (HOVER)'}
               </button>
+
+              {/* Info Overlay Label */}
+              <div className="absolute top-3 left-3 bg-black/75 backdrop-blur-md text-[8.5px] text-cyan-400 font-black px-2.5 py-1 rounded border border-cyan-500/20 uppercase tracking-widest pointer-events-none select-none flex items-center gap-1.5 shadow-lg">
+                <LucideIcons.Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                OTOMATİK GEÇİŞ (HOVER)
+              </div>
             </div>
           )}
 

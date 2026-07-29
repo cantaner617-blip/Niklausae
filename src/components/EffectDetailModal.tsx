@@ -40,6 +40,14 @@ export default function EffectDetailModal({ darkMode, isOpen, effect, onClose }:
 
   if (!isOpen || !effect) return null;
 
+  // Mouse follow coordinate tracker
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+    setCompareSliderPos(percentage);
+  };
+
   // Helper to parse YouTube link
   const youtubeEmbedUrl = (() => {
     if (!effect.videoPreviewUrl) return null;
@@ -252,7 +260,20 @@ export default function EffectDetailModal({ darkMode, isOpen, effect, onClose }:
                   /* Custom Image Comparison / Preview */
                   effect.afterImage ? (
                     /* Slider comparison for custom images */
-                    <div className="relative w-full h-full select-none overflow-hidden">
+                    <div 
+                      className="relative w-full h-full select-none overflow-hidden cursor-ew-resize group/modalcc"
+                      onMouseMove={handleMouseMove}
+                      onMouseLeave={() => setCompareSliderPos(50)}
+                      onTouchMove={(e) => {
+                        if (e.touches.length > 0) {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const x = e.touches[0].clientX - rect.left;
+                          const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+                          setCompareSliderPos(percentage);
+                        }
+                      }}
+                      onTouchEnd={() => setCompareSliderPos(50)}
+                    >
                       {/* Background image 1: After image (with no filter since it's already graded) */}
                       <div 
                         className="absolute inset-0 w-full h-full bg-cover bg-center"
@@ -278,23 +299,19 @@ export default function EffectDetailModal({ darkMode, isOpen, effect, onClose }:
                         </div>
                       </div>
 
-                      {/* Range input Overlay */}
-                      <input 
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={compareSliderPos}
-                        onChange={(e) => setCompareSliderPos(parseInt(e.target.value))}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-20"
-                      />
-
                       {/* Slider Labels */}
-                      <span className="absolute bottom-3 left-3 bg-black/65 text-[10px] text-white font-black px-2 py-0.5 rounded font-mono">
+                      <span className="absolute bottom-3 left-3 bg-black/65 text-[10px] text-white font-black px-2 py-0.5 rounded font-mono select-none pointer-events-none">
                         ÖNCEKİ (RAW)
                       </span>
-                      <span className="absolute bottom-3 right-3 bg-purple-600/80 text-[10px] text-white font-black px-2 py-0.5 rounded font-mono">
+                      <span className="absolute bottom-3 right-3 bg-purple-600/80 text-[10px] text-white font-black px-2 py-0.5 rounded font-mono select-none pointer-events-none">
                         SONRAKİ (EDIT)
                       </span>
+
+                      {/* Hover overlay hint */}
+                      <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md text-[8.5px] text-purple-300 font-black px-2.5 py-1 rounded border border-purple-500/20 uppercase tracking-widest pointer-events-none select-none opacity-0 group-hover/modalcc:opacity-100 transition-opacity duration-200 flex items-center gap-1.5 shadow-lg z-25">
+                        <Eye className="w-3 h-3 animate-pulse" />
+                        ANLIK KARŞILAŞTIRMA (FARE KULLANIN)
+                      </div>
                     </div>
                   ) : (
                     /* Simple single custom image preview */
@@ -310,7 +327,20 @@ export default function EffectDetailModal({ darkMode, isOpen, effect, onClose }:
               <>
                 {/* 1. Renk Efektleri (CC Split Compare Slider) */}
                 {effect.categoryId === 'renk-efektleri' && (
-                  <div className="relative aspect-video w-full select-none overflow-hidden">
+                  <div 
+                    className="relative aspect-video w-full select-none overflow-hidden cursor-ew-resize group/modalsim"
+                    onMouseMove={handleMouseMove}
+                    onMouseLeave={() => setCompareSliderPos(50)}
+                    onTouchMove={(e) => {
+                      if (e.touches.length > 0) {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const x = e.touches[0].clientX - rect.left;
+                        const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+                        setCompareSliderPos(percentage);
+                      }
+                    }}
+                    onTouchEnd={() => setCompareSliderPos(50)}
+                  >
                     {/* Background image 1: Graded side */}
                     <div 
                       className="absolute inset-0 w-full h-full bg-cover bg-center"
@@ -339,26 +369,19 @@ export default function EffectDetailModal({ darkMode, isOpen, effect, onClose }:
                       </div>
                     </div>
 
-                    {/* Range input Overlay */}
-                    <input 
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={compareSliderPos}
-                      onChange={(e) => setCompareSliderPos(parseInt(e.target.value))}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-20"
-                    />
-
                     {/* Slider Labels */}
-                    <span className="absolute bottom-3 left-3 bg-black/65 text-[10px] text-white font-black px-2 py-0.5 rounded font-mono">
+                    <span className="absolute bottom-3 left-3 bg-black/65 text-[10px] text-white font-black px-2 py-0.5 rounded font-mono select-none pointer-events-none">
                       ORIGINAL (HAM)
                     </span>
-                    <span className="absolute bottom-3 right-3 bg-purple-600/80 text-[10px] text-white font-black px-2 py-0.5 rounded font-mono">
+                    <span className="absolute bottom-3 right-3 bg-purple-600/80 text-[10px] text-white font-black px-2 py-0.5 rounded font-mono select-none pointer-events-none">
                       CC APPLIED (EFEKTLİ)
                     </span>
-                    <span className="absolute top-3 left-3 bg-black/65 text-[9px] text-neutral-300 font-bold px-2 py-1 rounded">
-                      Kaydırıcıyı sürükleyerek karşılaştırın
-                    </span>
+
+                    {/* Hover overlay hint */}
+                    <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md text-[8.5px] text-purple-300 font-black px-2.5 py-1 rounded border border-purple-500/20 uppercase tracking-widest pointer-events-none select-none opacity-0 group-hover/modalsim:opacity-100 transition-opacity duration-200 flex items-center gap-1.5 shadow-lg z-20">
+                      <Eye className="w-3 h-3 animate-pulse" />
+                      ANLIK SİMÜLASYON (FARE KULLANIN)
+                    </div>
                   </div>
                 )}
 
