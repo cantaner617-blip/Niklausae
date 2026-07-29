@@ -27,9 +27,9 @@ const firebaseConfig = {
 // Check if all necessary configuration keys are provided
 export const isFirebaseConfigured = (): boolean => {
   return !!(
-    firebaseConfig.apiKey &&
-    firebaseConfig.projectId &&
-    firebaseConfig.appId
+    import.meta.env.VITE_FIREBASE_API_KEY &&
+    import.meta.env.VITE_FIREBASE_PROJECT_ID &&
+    import.meta.env.VITE_FIREBASE_APP_ID
   );
 };
 

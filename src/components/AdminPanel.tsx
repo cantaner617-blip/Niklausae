@@ -875,7 +875,14 @@ export default function AdminPanel({
   };
 
   const handleSaveEffect = async () => {
-    if (!effectName.trim() || !effectCategoryId) return;
+    if (!effectName.trim()) {
+      alert("Lütfen Preset / Efekt adını girin.");
+      return;
+    }
+    if (!effectCategoryId) {
+      alert("Lütfen bir hedef kategori seçin.");
+      return;
+    }
 
     const reqArray = effectRequirements.split(',').map(s => s.trim()).filter(Boolean);
 
@@ -898,15 +905,17 @@ export default function AdminPanel({
         videoPreviewUrl: effectVideoPreviewUrl || undefined,
       };
 
+      // Optimistic update so it shows up instantly
+      const updatedList = effects.map(eff => eff.id === editingEffectId ? updatedEff : eff);
+      setEffects(updatedList);
+
       if (isFirebaseConfigured()) {
         try {
           await saveEffectToFirebase(updatedEff);
         } catch (e) {
           console.error("Firebase effect save error:", e);
+          alert("Firebase bulut veritabanına kaydedilirken bir hata oluştu: " + (e as Error).message);
         }
-      } else {
-        const updated = effects.map(eff => eff.id === editingEffectId ? updatedEff : eff);
-        setEffects(updated);
       }
       setEditingEffectId(null);
     } else {
@@ -929,19 +938,22 @@ export default function AdminPanel({
         videoPreviewUrl: effectVideoPreviewUrl || undefined,
       };
 
+      // Optimistic update so it shows up instantly
+      setEffects([newEff, ...effects]);
+
       if (isFirebaseConfigured()) {
         try {
           await saveEffectToFirebase(newEff);
         } catch (e) {
           console.error("Firebase effect add error:", e);
+          alert("Firebase bulut veritabanına eklenirken bir hata oluştu: " + (e as Error).message);
         }
-      } else {
-        setEffects([newEff, ...effects]);
       }
     }
 
     // Reset Form
     resetEffectForm();
+    alert("Efekt/Preset başarıyla kütüphaneye eklendi!");
   };
 
   const handleDeleteEffect = async (id: string) => {
