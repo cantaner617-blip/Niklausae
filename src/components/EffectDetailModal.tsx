@@ -50,10 +50,19 @@ export default function EffectDetailModal({ darkMode, isOpen, effect, onClose }:
 
   // Helper to parse YouTube link
   const youtubeEmbedUrl = (() => {
-    if (!effect.videoPreviewUrl) return null;
+    const url = effect.videoPreviewUrl;
+    if (!url) return null;
+    if (url.includes('youtube.com/embed/') || url.includes('youtube-nocookie.com/embed/')) {
+      const separator = url.includes('?') ? '&' : '?';
+      return `${url}${separator}autoplay=1&mute=1`;
+    }
+    const shortsMatch = url.match(/\/shorts\/([a-zA-Z0-9_-]{11})/);
+    if (shortsMatch && shortsMatch[1]) {
+      return `https://www.youtube.com/embed/${shortsMatch[1]}?autoplay=1&mute=1`;
+    }
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = effect.videoPreviewUrl.match(regExp);
-    return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}?autoplay=1&mute=1` : null;
+    const match = url.match(regExp);
+    return (match && match[2] && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}?autoplay=1&mute=1` : null;
   })();
 
   // Simulate Downloading file

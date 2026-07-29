@@ -4,6 +4,24 @@ import { Category, EffectItem } from '../types';
 import { EFFECT_ITEMS } from '../data';
 import { playSynthesizedSFX, stopAllSynthesizedSFX } from '../lib/audioGenerator';
 
+export const getYouTubeEmbedUrl = (url: string | undefined): string | null => {
+  if (!url) return null;
+  if (url.includes('youtube.com/embed/') || url.includes('youtube-nocookie.com/embed/')) {
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}autoplay=1&mute=1`;
+  }
+  const shortsMatch = url.match(/\/shorts\/([a-zA-Z0-9_-]{11})/);
+  if (shortsMatch && shortsMatch[1]) {
+    return `https://www.youtube.com/embed/${shortsMatch[1]}?autoplay=1&mute=1`;
+  }
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  if (match && match[2] && match[2].length === 11) {
+    return `https://www.youtube.com/embed/${match[2]}?autoplay=1&mute=1`;
+  }
+  return null;
+};
+
 interface CategoryDetailProps {
   darkMode: boolean;
   category: Category;
@@ -470,8 +488,32 @@ function DetailEffectCard({
         {/* Aspect ratio bounding box */}
         <div className="relative w-full aspect-video select-none overflow-hidden flex items-center justify-center">
           
-          {/* A. COLOR CORRECTIONS (CC Before/After Inline Comparison Slider) */}
-          {(effect.beforeImage || category.id === 'renk-efektleri') && (
+          {effect.videoPreviewUrl ? (
+            <div className="relative w-full h-full bg-black flex items-center justify-center w-full">
+              {getYouTubeEmbedUrl(effect.videoPreviewUrl) ? (
+                <iframe
+                  src={getYouTubeEmbedUrl(effect.videoPreviewUrl)!}
+                  className="w-full h-full aspect-video"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              ) : (
+                <video
+                  src={effect.videoPreviewUrl}
+                  className="w-full h-full aspect-video object-cover"
+                  controls
+                  playsInline
+                  muted
+                  autoPlay
+                  loop
+                ></video>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* A. COLOR CORRECTIONS (CC Before/After Inline Comparison Slider) */}
+              {(effect.beforeImage || category.id === 'renk-efektleri') && (
             <div 
               className="relative w-full h-full cursor-ew-resize group/cc"
               onMouseMove={handleMouseMove}
@@ -758,6 +800,8 @@ function DetailEffectCard({
                 </span>
               </div>
             </div>
+          )}
+            </>
           )}
         </div>
       </div>
