@@ -471,7 +471,7 @@ function DetailEffectCard({
         <div className="relative w-full aspect-video select-none overflow-hidden flex items-center justify-center">
           
           {/* A. COLOR CORRECTIONS (CC Before/After Inline Comparison Slider) */}
-          {category.id === 'renk-efektleri' && (
+          {(effect.beforeImage || category.id === 'renk-efektleri') && (
             <div 
               className="relative w-full h-full cursor-ew-resize group/cc"
               onMouseMove={handleMouseMove}
@@ -486,27 +486,32 @@ function DetailEffectCard({
               }}
               onTouchEnd={() => setCompareSliderPos(50)}
             >
-              {/* Graded Right side */}
-              <div
-                className="absolute inset-0 w-full h-full bg-cover bg-center"
+              {/* Graded Right side (After) */}
+              <img
+                src={effect.afterImage || effect.beforeImage || getCCImage()}
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none"
                 style={{
-                  backgroundImage: `url(${getCCImage()})`,
-                  filter: getCCFilterStyle(),
+                  filter: (effect.afterImage || effect.beforeImage) ? 'none' : getCCFilterStyle(),
                 }}
+                alt="After"
               />
 
-              {/* Raw Left side (width based on slider value) */}
-              <div
-                className="absolute inset-0 h-full bg-cover bg-center border-r border-white/40"
+              {/* Raw Left side (Before - Clipped by compareSliderPos) */}
+              <img
+                src={effect.beforeImage || getCCImage()}
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none border-r border-white/40"
                 style={{
-                  backgroundImage: `url(${getCCImage()})`,
-                  width: `${compareSliderPos}%`,
+                  clipPath: `polygon(0 0, ${compareSliderPos}% 0, ${compareSliderPos}% 100%, 0 100%)`,
+                  filter: (effect.beforeImage && !effect.afterImage) ? getCCFilterStyle() : 'none',
                 }}
+                alt="Before"
               />
 
               {/* Centered circular grip divider knob exactly like video */}
               <div
-                className="absolute top-0 bottom-0 w-0.5 bg-white pointer-events-none"
+                className="absolute top-0 bottom-0 w-0.5 bg-white pointer-events-none z-10"
                 style={{ left: `${compareSliderPos}%` }}
               >
                 <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-white text-black shadow-2xl flex items-center justify-center text-[10px] font-black rotate-90 select-none border border-neutral-200">
@@ -515,15 +520,15 @@ function DetailEffectCard({
               </div>
 
               {/* Slider Labels exactly like video overlay */}
-              <span className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm text-[8px] md:text-[9.5px] text-neutral-300 font-black px-2 py-0.5 rounded uppercase font-mono select-none pointer-events-none">
+              <span className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm text-[8px] md:text-[9.5px] text-neutral-300 font-black px-2 py-0.5 rounded uppercase font-mono select-none pointer-events-none z-10">
                 ÖNCESİ
               </span>
-              <span className="absolute bottom-3 right-3 bg-purple-600/80 backdrop-blur-sm text-[8px] md:text-[9.5px] text-white font-black px-2 py-0.5 rounded uppercase font-mono select-none pointer-events-none">
+              <span className="absolute bottom-3 right-3 bg-purple-600/80 backdrop-blur-sm text-[8px] md:text-[9.5px] text-white font-black px-2 py-0.5 rounded uppercase font-mono select-none pointer-events-none z-10">
                 SONRASI
               </span>
 
               {/* Hover overlay hint */}
-              <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md text-[8.5px] text-purple-300 font-black px-2.5 py-1 rounded border border-purple-500/20 uppercase tracking-widest pointer-events-none select-none opacity-0 group-hover/cc:opacity-100 transition-opacity duration-200 flex items-center gap-1.5 shadow-lg">
+              <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md text-[8.5px] text-purple-300 font-black px-2.5 py-1 rounded border border-purple-500/20 uppercase tracking-widest pointer-events-none select-none opacity-0 group-hover/cc:opacity-100 transition-opacity duration-200 flex items-center gap-1.5 shadow-lg z-10">
                 <LucideIcons.Eye className="w-3 h-3 animate-pulse" />
                 HIZLI KONTROL (FARE KULLANIN)
               </div>
@@ -531,7 +536,7 @@ function DetailEffectCard({
           )}
 
           {/* B. SHAKES (Interactive Simulation) */}
-          {category.id === 'shakeler' && (
+          {category.id === 'shakeler' && !effect.beforeImage && (
             <div 
               className="relative w-full h-full bg-neutral-950 flex flex-col items-center justify-center cursor-pointer overflow-hidden group/shake"
               onMouseEnter={() => setIsShaking(true)}
@@ -575,8 +580,8 @@ function DetailEffectCard({
             </div>
           )}
 
-          {/* C. TWIXTOR SLOW-MOTION SIMULATOR */}
-          {category.id === 'twixtor-ayarlari' && (
+           {/* C. TWIXTOR SLOW-MOTION SIMULATOR */}
+          {category.id === 'twixtor-ayarlari' && !effect.beforeImage && (
             <div 
               className="relative w-full h-full bg-[#050507] flex flex-col items-center justify-center p-6 cursor-pointer group/twixtor"
               onMouseEnter={() => setIsSlowMo(true)}
@@ -617,7 +622,7 @@ function DetailEffectCard({
           )}
 
           {/* D. TRANSITION SIMULATOR */}
-          {category.id === 'gecis-efektleri' && (
+          {category.id === 'gecis-efektleri' && !effect.beforeImage && (
             <div 
               className="relative w-full h-full bg-neutral-950 flex flex-col items-center justify-center cursor-pointer group/trans"
               onMouseEnter={() => setIsHovered(true)}
@@ -677,7 +682,7 @@ function DetailEffectCard({
                 className="absolute py-2 px-5 rounded-full text-xs font-black tracking-tight flex items-center gap-1.5 bg-cyan-500 hover:bg-cyan-600 text-white cursor-pointer shadow-lg active:scale-95 transition-all z-20 group-hover/trans:scale-105"
               >
                 <LucideIcons.Sparkle className="w-3.5 h-3.5" />
-                {isHovered ? 'GEÇİŞLER DÖNGÜDE' : 'GEÇİŞİ TETİKLE (HOVER)'}
+                {isHovered ? 'GEÇİŞLER DÖNGÜDE' : 'GEÇİŞI TETİKLE (HOVER)'}
               </button>
 
               {/* Info Overlay Label */}
@@ -689,7 +694,7 @@ function DetailEffectCard({
           )}
 
           {/* E. SOUND EFFECTS PLAYBACK INLINE */}
-          {category.id === 'ses-efektleri' && (
+          {category.id === 'ses-efektleri' && !effect.beforeImage && (
             <div className="relative w-full h-full bg-[#050507] flex flex-col items-center justify-center p-6">
               {/* SoundWave visual representation */}
               <div className="flex items-center gap-1.5 h-12 mb-2">

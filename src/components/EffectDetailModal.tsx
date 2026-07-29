@@ -274,19 +274,23 @@ export default function EffectDetailModal({ darkMode, isOpen, effect, onClose }:
                       }}
                       onTouchEnd={() => setCompareSliderPos(50)}
                     >
-                      {/* Background image 1: After image (with no filter since it's already graded) */}
-                      <div 
-                        className="absolute inset-0 w-full h-full bg-cover bg-center"
-                        style={{ backgroundImage: `url("${effect.afterImage}")` }}
+                      {/* After image (Graded) */}
+                      <img 
+                        src={effect.afterImage}
+                        referrerPolicy="no-referrer"
+                        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none"
+                        alt="After"
                       />
                       
-                      {/* Background image 2: Before image (Clipped) */}
-                      <div 
-                        className="absolute inset-0 h-full bg-cover bg-center border-r border-white/60"
+                      {/* Before image (Clipped) */}
+                      <img 
+                        src={effect.beforeImage}
+                        referrerPolicy="no-referrer"
+                        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none border-r border-white/60"
                         style={{ 
-                          backgroundImage: `url("${effect.beforeImage}")`,
-                          width: `${compareSliderPos}%`
+                          clipPath: `polygon(0 0, ${compareSliderPos}% 0, ${compareSliderPos}% 100%, 0 100%)`
                         }}
+                        alt="Before"
                       />
 
                       {/* Vertical Divider line */}
@@ -315,9 +319,11 @@ export default function EffectDetailModal({ darkMode, isOpen, effect, onClose }:
                     </div>
                   ) : (
                     /* Simple single custom image preview */
-                    <div 
-                      className="w-full h-full bg-cover bg-center"
-                      style={{ backgroundImage: `url("${effect.beforeImage}")` }}
+                    <img 
+                      src={effect.beforeImage}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover object-center pointer-events-none select-none"
+                      alt="Preview"
                     />
                   )
                 ) : null}
@@ -341,22 +347,26 @@ export default function EffectDetailModal({ darkMode, isOpen, effect, onClose }:
                     }}
                     onTouchEnd={() => setCompareSliderPos(50)}
                   >
-                    {/* Background image 1: Graded side */}
-                    <div 
-                      className="absolute inset-0 w-full h-full bg-cover bg-center"
+                    {/* Graded side */}
+                    <img 
+                      src="https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80"
+                      referrerPolicy="no-referrer"
+                      className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none"
                       style={{ 
-                        backgroundImage: 'url("https://picsum.photos/seed/editgrade/1200/800")',
                         filter: getCCFilterStyle()
                       }}
+                      alt="Graded"
                     />
                     
-                    {/* Background image 2: Raw side (Clipped) */}
-                    <div 
-                      className="absolute inset-0 h-full bg-cover bg-center"
+                    {/* Raw side (Clipped) */}
+                    <img 
+                      src="https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80"
+                      referrerPolicy="no-referrer"
+                      className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none border-r border-white/60"
                       style={{ 
-                        backgroundImage: 'url("https://picsum.photos/seed/editgrade/1200/800")',
-                        width: `${compareSliderPos}%`
+                        clipPath: `polygon(0 0, ${compareSliderPos}% 0, ${compareSliderPos}% 100%, 0 100%)`
                       }}
+                      alt="Raw"
                     />
 
                     {/* Vertical Divider line */}
