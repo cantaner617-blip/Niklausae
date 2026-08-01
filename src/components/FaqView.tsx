@@ -71,7 +71,7 @@ export default function FaqView({ darkMode, faqs, onBack, onOpenFeedback }: FaqV
         </button>
 
         <span className="text-[10px] font-mono font-black uppercase tracking-widest text-neutral-500">
-          Pars Yardım Merkezi
+          NIKLAUSAE Yardım Merkezi
         </span>
       </div>
 

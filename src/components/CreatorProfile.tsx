@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Youtube, Instagram, MessageSquare, Play, X, Eye, ExternalLink } from 'lucide-react';
 import { PORTFOLIO_VIDEOS } from '../data';
-import parsMaziPortrait from '../assets/images/pars_mazi_portrait_1784209992091.jpg';
+import niklausaePortrait from '../assets/images/pars_mazi_portrait_1784209992091.jpg';
 
 interface CreatorProfileProps {
   darkMode: boolean;
@@ -45,7 +45,7 @@ export default function CreatorProfile({
         <div className="flex items-center gap-2 mb-6">
           <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.7)]" />
           <span className={`text-[10px] font-black tracking-widest uppercase ${darkMode ? 'text-neutral-400' : 'text-neutral-500'}`}>
-            {(creatorName || 'PARS MAZI').toUpperCase().replace(/\s+/g, '')} / CREATIVE PROFILE
+            {(creatorName || 'NIKLAUSAE').toUpperCase().replace(/\s+/g, '')} / CREATIVE PROFILE
           </span>
         </div>
 
@@ -56,7 +56,7 @@ export default function CreatorProfile({
           <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden group shadow-2xl border border-neutral-800/20 bg-neutral-900">
             {/* The generated creator image */}
             <img
-              src={creatorPortrait || parsMaziPortrait}
+              src={creatorPortrait || niklausaePortrait}
               alt={creatorName}
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover grayscale transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0"
@@ -206,7 +206,7 @@ export default function CreatorProfile({
                   <Play className="w-5 h-5 fill-current" />
                 </div>
                 <div className="text-left">
-                  <h3 className="text-lg font-black uppercase tracking-tight">Pars Mazi • Portfolyo</h3>
+                  <h3 className="text-lg font-black uppercase tracking-tight">NIKLAUSAE • Portfolyo</h3>
                   <p className="text-[10px] text-neutral-500 font-medium">After Effects Kurgu ve Motion Tasarım Gösterimi</p>
                 </div>
               </div>
@@ -306,7 +306,7 @@ export default function CreatorProfile({
             <div className={`p-4 border-t text-center text-xs flex justify-between items-center px-6 ${
               darkMode ? 'border-neutral-800' : 'border-neutral-100'
             }`}>
-              <span className="text-[10px] text-neutral-500 font-bold">Pars Mazi • Kurgu Kütüphanesi</span>
+              <span className="text-[10px] text-neutral-500 font-bold">NIKLAUSAE • Kurgu Kütüphanesi</span>
               <a 
                 href="https://youtube.com" 
                 target="_blank" 

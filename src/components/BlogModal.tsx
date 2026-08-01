@@ -76,7 +76,7 @@ export default function BlogModal({ isOpen, onClose, darkMode, blogs }: BlogModa
                 )}
                 <div>
                   <h3 className="text-base font-black tracking-wide">
-                    {selectedPost ? 'Makale Detayı' : 'Pars Blog'}
+                    {selectedPost ? 'Makale Detayı' : 'NIKLAUSAE Blog'}
                   </h3>
                   <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold mt-0.5">
                     {selectedPost ? 'BİLGİ VE REHBER ARŞİVİ' : 'EDITÖR NOTLARI VE EĞİTİMLER'}

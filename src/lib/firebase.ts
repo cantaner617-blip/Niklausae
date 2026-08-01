@@ -105,8 +105,8 @@ export const fetchAdminPasswordFromFirebase = async (): Promise<string | null> =
       return docSnap.data().adminPassword || null;
     } else {
       // Initialize with default password in Firebase if it does not exist yet
-      await setDoc(docRef, { adminPassword: 'pars123' });
-      return 'pars123';
+      await setDoc(docRef, { adminPassword: 'niklausae123' });
+      return 'niklausae123';
     }
   } catch (error) {
     console.error("Error fetching admin password from Firebase:", error);
@@ -136,8 +136,8 @@ export const subscribeToAdminPassword = (callback: (password: string) => void) =
         callback(docSnap.data().adminPassword);
       } else if (!docSnap.exists()) {
         // If document doesn't exist, auto-initialize with default password
-        setDoc(docRef, { adminPassword: 'pars123' }).catch(err => console.error(err));
-        callback('pars123');
+        setDoc(docRef, { adminPassword: 'niklausae123' }).catch(err => console.error(err));
+        callback('niklausae123');
       }
     }, (error) => {
       console.error("Realtime subscription error (admin password):", error);
@@ -573,14 +573,14 @@ export const autoSeedDefaultData = async (): Promise<void> => {
     // 1. General Settings
     const settingsDoc = doc(dbInstance, 'settings', 'general');
     await setDoc(settingsDoc, {
-      siteTitle: 'PARS MAZI',
+      siteTitle: 'NIKLAUSAE',
       siteSubtitle: 'EDIT PACK',
       siteBadge: 'AFTER EFFECTS PACKS',
       activeStatusTextState: '2,845 AKTİF EDİTÖR ÇEVRİMİÇİ',
       discordUrl: 'https://discord.gg',
-      creatorName: 'PARS MAZI',
+      creatorName: 'NIKLAUSAE',
       creatorTitle: 'VIDEO EDITOR • MOTION DESIGNER',
-      creatorBio: 'Merhaba! Ben Pars Mazi. 6 yılı aşkın süredir After Effects ve Premiere Pro platformlarında profesyonel video kurgu, 3D animasyon ve hareket tasarımı (motion design) yapıyorum.\n\nSiz editörler için hazırladığım bu canlı kütüphanede, kurgularınızı profesyonel seviyeye çıkaracak renk derecelendirmeleri (CC), pürüzsüz dikey/yatay shake\'ler, akıcı Twixtor yavaş çekim ayarları ve geçiş efektleri gibi her editörün arşivinde bulunması gereken en kaliteli hazır ayarları (presets) paylaşıyorum.',
+      creatorBio: 'Merhaba! Ben NIKLAUSAE. 6 yılı aşkın süredir After Effects ve Premiere Pro platformlarında profesyonel video kurgu, 3D animasyon ve hareket tasarımı (motion design) yapıyorum.\n\nSiz editörler için hazırladığım bu canlı kütüphanede, kurgularınızı profesyonel seviyeye çıkaracak renk derecelendirmeleri (CC), pürüzsüz dikey/yatay shake\'ler, akıcı Twixtor yavaş çekim ayarları ve geçiş efektleri gibi her editörün arşivinde bulunması gereken en kaliteli hazır ayarları (presets) paylaşıyorum.',
       creatorExperience: '6+',
       creatorYoutube: 'https://youtube.com',
       creatorInstagram: 'https://instagram.com',
@@ -611,7 +611,7 @@ export const autoSeedDefaultData = async (): Promise<void> => {
     const annDoc = doc(dbInstance, 'announcements', 'default-1');
     await setDoc(annDoc, cleanObject({
       id: 'default-1',
-      text: '🎉 YENİ GÜNCELLEME: Pars Mazi Edit Arşivi v2 Aktif Edildi! Tüm renk ayarları (CC) güncellendi.',
+      text: '🎉 YENİ GÜNCELLEME: NIKLAUSAE Edit Arşivi v2 Aktif Edildi! Tüm renk ayarları (CC) güncellendi.',
       type: 'info',
       active: true
     } as Announcement));

@@ -51,82 +51,82 @@ export default function App() {
 
   // Site configuration states
   const [siteTitle, setSiteTitle] = useState<string>(() => {
-    return localStorage.getItem('pars_mazi_site_title') || 'PARS MAZI';
+    return localStorage.getItem('niklausae_site_title') || 'NIKLAUSAE';
   });
   const [siteSubtitle, setSiteSubtitle] = useState<string>(() => {
-    return localStorage.getItem('pars_mazi_site_subtitle') || 'EDIT PACK';
+    return localStorage.getItem('niklausae_site_subtitle') || 'EDIT PACK';
   });
   const [siteBadge, setSiteBadge] = useState<string>(() => {
-    return localStorage.getItem('pars_mazi_site_badge') || 'AFTER EFFECTS PACKS';
+    return localStorage.getItem('niklausae_site_badge') || 'AFTER EFFECTS PACKS';
   });
   const [activeStatusTextState, setActiveStatusTextState] = useState<string>(() => {
-    return localStorage.getItem('pars_mazi_active_status') || '2,845 AKTİF EDİTÖR ÇEVRİMİÇİ';
+    return localStorage.getItem('niklausae_active_status') || '2,845 AKTİF EDİTÖR ÇEVRİMİÇİ';
   });
   const [discordUrl, setDiscordUrl] = useState<string>(() => {
-    return localStorage.getItem('pars_mazi_discord_url') || 'https://discord.gg';
+    return localStorage.getItem('niklausae_discord_url') || 'https://discord.gg';
   });
 
   // Creator Profile states
   const [creatorName, setCreatorName] = useState<string>(() => {
-    return localStorage.getItem('pars_mazi_creator_name') || 'PARS MAZI';
+    return localStorage.getItem('niklausae_creator_name') || 'NIKLAUSAE';
   });
   const [creatorTitle, setCreatorTitle] = useState<string>(() => {
-    return localStorage.getItem('pars_mazi_creator_title') || 'VIDEO EDITOR • MOTION DESIGNER';
+    return localStorage.getItem('niklausae_creator_title') || 'VIDEO EDITOR • MOTION DESIGNER';
   });
   const [creatorBio, setCreatorBio] = useState<string>(() => {
-    return localStorage.getItem('pars_mazi_creator_bio') || 'Merhaba! Ben Pars Mazi. 6 yılı aşkın süredir After Effects ve Premiere Pro platformlarında profesyonel video kurgu, 3D animasyon ve hareket tasarımı (motion design) yapıyorum.\n\nSiz editörler için hazırladığım bu canlı kütüphanede, kurgularınızı profesyonel seviyeye çıkaracak renk derecelendirmeleri (CC), pürüzsüz dikey/yatay shake\'ler, akıcı Twixtor yavaş çekim ayarları ve geçiş efektleri gibi her editörün arşivinde bulunması gereken en kaliteli hazır ayarları (presets) paylaşıyorum.';
+    return localStorage.getItem('niklausae_creator_bio') || 'Merhaba! Ben NIKLAUSAE. 6 yılı aşkın süredir After Effects ve Premiere Pro platformlarında profesyonel video kurgu, 3D animasyon ve hareket tasarımı (motion design) yapıyorum.\n\nSiz editörler için hazırladığım bu canlı kütüphanede, kurgularınızı profesyonel seviyeye çıkaracak renk derecelendirmeleri (CC), pürüzsüz dikey/yatay shake\'ler, akıcı Twixtor yavaş çekim ayarları ve geçiş efektleri gibi her editörün arşivinde bulunması gereken en kaliteli hazır ayarları (presets) paylaşıyorum.';
   });
   const [creatorExperience, setCreatorExperience] = useState<string>(() => {
-    return localStorage.getItem('pars_mazi_creator_experience') || '6+';
+    return localStorage.getItem('niklausae_creator_experience') || '6+';
   });
   const [creatorYoutube, setCreatorYoutube] = useState<string>(() => {
-    return localStorage.getItem('pars_mazi_creator_youtube') || 'https://youtube.com';
+    return localStorage.getItem('niklausae_creator_youtube') || 'https://youtube.com';
   });
   const [creatorInstagram, setCreatorInstagram] = useState<string>(() => {
-    return localStorage.getItem('pars_mazi_creator_instagram') || 'https://instagram.com';
+    return localStorage.getItem('niklausae_creator_instagram') || 'https://instagram.com';
   });
   const [creatorDiscord, setCreatorDiscord] = useState<string>(() => {
-    return localStorage.getItem('pars_mazi_creator_discord') || 'https://discord.gg';
+    return localStorage.getItem('niklausae_creator_discord') || 'https://discord.gg';
   });
   const [creatorTiktok, setCreatorTiktok] = useState<string>(() => {
-    return localStorage.getItem('pars_mazi_creator_tiktok') || 'https://tiktok.com';
+    return localStorage.getItem('niklausae_creator_tiktok') || 'https://tiktok.com';
   });
   const [creatorPortrait, setCreatorPortrait] = useState<string>(() => {
-    return localStorage.getItem('pars_mazi_creator_portrait') || '';
+    return localStorage.getItem('niklausae_creator_portrait') || '';
   });
 
   // Creator Profile local synchronization
   useEffect(() => {
-    localStorage.setItem('pars_mazi_creator_name', creatorName);
+    localStorage.setItem('niklausae_creator_name', creatorName);
   }, [creatorName]);
   useEffect(() => {
-    localStorage.setItem('pars_mazi_creator_title', creatorTitle);
+    localStorage.setItem('niklausae_creator_title', creatorTitle);
   }, [creatorTitle]);
   useEffect(() => {
-    localStorage.setItem('pars_mazi_creator_bio', creatorBio);
+    localStorage.setItem('niklausae_creator_bio', creatorBio);
   }, [creatorBio]);
   useEffect(() => {
-    localStorage.setItem('pars_mazi_creator_experience', creatorExperience);
+    localStorage.setItem('niklausae_creator_experience', creatorExperience);
   }, [creatorExperience]);
   useEffect(() => {
-    localStorage.setItem('pars_mazi_creator_youtube', creatorYoutube);
+    localStorage.setItem('niklausae_creator_youtube', creatorYoutube);
   }, [creatorYoutube]);
   useEffect(() => {
-    localStorage.setItem('pars_mazi_creator_instagram', creatorInstagram);
+    localStorage.setItem('niklausae_creator_instagram', creatorInstagram);
   }, [creatorInstagram]);
   useEffect(() => {
-    localStorage.setItem('pars_mazi_creator_discord', creatorDiscord);
+    localStorage.setItem('niklausae_creator_discord', creatorDiscord);
   }, [creatorDiscord]);
   useEffect(() => {
-    localStorage.setItem('pars_mazi_creator_tiktok', creatorTiktok);
+    localStorage.setItem('niklausae_creator_tiktok', creatorTiktok);
   }, [creatorTiktok]);
   useEffect(() => {
-    localStorage.setItem('pars_mazi_creator_portrait', creatorPortrait);
+    localStorage.setItem('niklausae_creator_portrait', creatorPortrait);
   }, [creatorPortrait]);
 
   // Dynamic Categories and Effects Lists loaded from LocalStorage
   const [categories, setCategories] = useState<Category[]>(() => {
-    const saved = localStorage.getItem('pars_mazi_categories');
+    const saved = localStorage.getItem('niklausae_categories');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -138,7 +138,7 @@ export default function App() {
   });
 
   const [effects, setEffects] = useState<EffectItem[]>(() => {
-    const saved = localStorage.getItem('pars_mazi_effects');
+    const saved = localStorage.getItem('niklausae_effects');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -150,7 +150,7 @@ export default function App() {
   });
 
   const [requiredPlugins, setRequiredPlugins] = useState<RequiredPlugin[]>(() => {
-    const saved = localStorage.getItem('pars_mazi_required_plugins');
+    const saved = localStorage.getItem('niklausae_required_plugins');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -162,7 +162,7 @@ export default function App() {
   });
 
   const [faqs, setFaqs] = useState<FaqItem[]>(() => {
-    const saved = localStorage.getItem('pars_mazi_faqs');
+    const saved = localStorage.getItem('niklausae_faqs');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -174,7 +174,7 @@ export default function App() {
   });
 
   const [blogs, setBlogs] = useState<BlogPost[]>(() => {
-    const saved = localStorage.getItem('pars_mazi_blogs');
+    const saved = localStorage.getItem('niklausae_blogs');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -187,13 +187,13 @@ export default function App() {
 
   // Realtime visitor count state
   const [visitCount, setVisitCount] = useState<number>(() => {
-    const stored = localStorage.getItem('pars_mazi_visits');
+    const stored = localStorage.getItem('niklausae_visits');
     return stored ? parseInt(stored, 10) : 1474;
   });
 
   // Realtime feedback state (for notifications)
   const [feedbackList, setFeedbackList] = useState<FeedbackSubmission[]>(() => {
-    const saved = localStorage.getItem('pars_mazi_feedback');
+    const saved = localStorage.getItem('niklausae_feedback');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -207,7 +207,7 @@ export default function App() {
   // Read feedback IDs tracking
   const [readFeedbackIds, setReadFeedbackIds] = useState<string[]>(() => {
     try {
-      const saved = localStorage.getItem('pars_mazi_read_feedback');
+      const saved = localStorage.getItem('niklausae_read_feedback');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -409,7 +409,7 @@ export default function App() {
   useEffect(() => {
     if (!isFirebaseConfigured()) {
       const updateAnnouncement = () => {
-        const saved = localStorage.getItem('pars_mazi_announcements');
+        const saved = localStorage.getItem('niklausae_announcements');
         if (saved) {
           try {
             const anns = JSON.parse(saved);
@@ -422,7 +422,7 @@ export default function App() {
           // Default initial announcement
           const defaultAnn: Announcement = {
             id: 'default-1',
-            text: '🎉 YENİ GÜNCELLEME: Pars Mazi Edit Arşivi v2 Aktif Edildi! Tüm renk ayarları (CC) güncellendi.',
+            text: '🎉 YENİ GÜNCELLEME: NIKLAUSAE Edit Arşivi v2 Aktif Edildi! Tüm renk ayarları (CC) güncellendi.',
             type: 'info',
             active: true,
             createdAt: new Date().toLocaleDateString('tr-TR'),
@@ -480,49 +480,49 @@ export default function App() {
       if (isFirebaseConfigured()) return; // Let Firebase handle real-time sync if configured
       
       switch (e.key) {
-        case 'pars_mazi_site_title':
+        case 'niklausae_site_title':
           if (e.newValue) setSiteTitle(e.newValue);
           break;
-        case 'pars_mazi_site_subtitle':
+        case 'niklausae_site_subtitle':
           if (e.newValue) setSiteSubtitle(e.newValue);
           break;
-        case 'pars_mazi_site_badge':
+        case 'niklausae_site_badge':
           if (e.newValue) setSiteBadge(e.newValue);
           break;
-        case 'pars_mazi_active_status':
+        case 'niklausae_active_status':
           if (e.newValue) setActiveStatusTextState(e.newValue);
           break;
-        case 'pars_mazi_discord_url':
+        case 'niklausae_discord_url':
           if (e.newValue) setDiscordUrl(e.newValue);
           break;
-        case 'pars_mazi_creator_name':
+        case 'niklausae_creator_name':
           if (e.newValue) setCreatorName(e.newValue);
           break;
-        case 'pars_mazi_creator_title':
+        case 'niklausae_creator_title':
           if (e.newValue) setCreatorTitle(e.newValue);
           break;
-        case 'pars_mazi_creator_bio':
+        case 'niklausae_creator_bio':
           if (e.newValue) setCreatorBio(e.newValue);
           break;
-        case 'pars_mazi_creator_experience':
+        case 'niklausae_creator_experience':
           if (e.newValue) setCreatorExperience(e.newValue);
           break;
-        case 'pars_mazi_creator_youtube':
+        case 'niklausae_creator_youtube':
           if (e.newValue) setCreatorYoutube(e.newValue);
           break;
-        case 'pars_mazi_creator_instagram':
+        case 'niklausae_creator_instagram':
           if (e.newValue) setCreatorInstagram(e.newValue);
           break;
-        case 'pars_mazi_creator_discord':
+        case 'niklausae_creator_discord':
           if (e.newValue) setCreatorDiscord(e.newValue);
           break;
-        case 'pars_mazi_creator_tiktok':
+        case 'niklausae_creator_tiktok':
           if (e.newValue) setCreatorTiktok(e.newValue);
           break;
-        case 'pars_mazi_creator_portrait':
+        case 'niklausae_creator_portrait':
           setCreatorPortrait(e.newValue || '');
           break;
-        case 'pars_mazi_categories':
+        case 'niklausae_categories':
           if (e.newValue) {
             try {
               setCategories(JSON.parse(e.newValue));
@@ -531,7 +531,7 @@ export default function App() {
             }
           }
           break;
-        case 'pars_mazi_effects':
+        case 'niklausae_effects':
           if (e.newValue) {
             try {
               setEffects(JSON.parse(e.newValue));
@@ -549,11 +549,11 @@ export default function App() {
 
   // Real-time visitor tracking logic (prevents refresh spamming via localStorage)
   useEffect(() => {
-    const visitorTracked = localStorage.getItem('pars_mazi_visitor_tracked');
+    const visitorTracked = localStorage.getItem('niklausae_visitor_tracked');
     const isNewVisitor = !visitorTracked;
     
     if (isNewVisitor) {
-      localStorage.setItem('pars_mazi_visitor_tracked', 'true');
+      localStorage.setItem('niklausae_visitor_tracked', 'true');
     }
 
     if (isFirebaseConfigured()) {
@@ -563,23 +563,23 @@ export default function App() {
       
       const unsub = subscribeToVisitorCount((count) => {
         setVisitCount(count);
-        localStorage.setItem('pars_mazi_visits', count.toString());
+        localStorage.setItem('niklausae_visits', count.toString());
       });
       
       return () => unsub();
     } else {
-      const stored = localStorage.getItem('pars_mazi_visits');
+      const stored = localStorage.getItem('niklausae_visits');
       let currentCount = stored ? parseInt(stored, 10) : 1474;
       
       if (isNewVisitor) {
         currentCount += 1;
-        localStorage.setItem('pars_mazi_visits', currentCount.toString());
+        localStorage.setItem('niklausae_visits', currentCount.toString());
       }
       setVisitCount(currentCount);
 
       // Listen for local changes to keep tabs in sync if offline
       const handleLocalVisits = (e: StorageEvent) => {
-        if (e.key === 'pars_mazi_visits' && e.newValue) {
+        if (e.key === 'niklausae_visits' && e.newValue) {
           setVisitCount(parseInt(e.newValue, 10));
         }
       };
@@ -589,7 +589,7 @@ export default function App() {
       const interval = setInterval(() => {
         setVisitCount(prev => {
           const next = prev + (Math.random() > 0.85 ? 1 : 0);
-          localStorage.setItem('pars_mazi_visits', next.toString());
+          localStorage.setItem('niklausae_visits', next.toString());
           return next;
         });
       }, 30000);
@@ -603,51 +603,51 @@ export default function App() {
 
   // Save states to LocalStorage (as offline fallback)
   useEffect(() => {
-    localStorage.setItem('pars_mazi_site_title', siteTitle);
+    localStorage.setItem('niklausae_site_title', siteTitle);
   }, [siteTitle]);
 
   useEffect(() => {
-    localStorage.setItem('pars_mazi_site_subtitle', siteSubtitle);
+    localStorage.setItem('niklausae_site_subtitle', siteSubtitle);
   }, [siteSubtitle]);
 
   useEffect(() => {
-    localStorage.setItem('pars_mazi_site_badge', siteBadge);
+    localStorage.setItem('niklausae_site_badge', siteBadge);
   }, [siteBadge]);
 
   useEffect(() => {
-    localStorage.setItem('pars_mazi_active_status', activeStatusTextState);
+    localStorage.setItem('niklausae_active_status', activeStatusTextState);
   }, [activeStatusTextState]);
 
   useEffect(() => {
-    localStorage.setItem('pars_mazi_discord_url', discordUrl);
+    localStorage.setItem('niklausae_discord_url', discordUrl);
   }, [discordUrl]);
 
   useEffect(() => {
-    localStorage.setItem('pars_mazi_categories', JSON.stringify(categories));
+    localStorage.setItem('niklausae_categories', JSON.stringify(categories));
   }, [categories]);
 
   useEffect(() => {
-    localStorage.setItem('pars_mazi_effects', JSON.stringify(effects));
+    localStorage.setItem('niklausae_effects', JSON.stringify(effects));
   }, [effects]);
 
   useEffect(() => {
-    localStorage.setItem('pars_mazi_required_plugins', JSON.stringify(requiredPlugins));
+    localStorage.setItem('niklausae_required_plugins', JSON.stringify(requiredPlugins));
   }, [requiredPlugins]);
 
   useEffect(() => {
-    localStorage.setItem('pars_mazi_faqs', JSON.stringify(faqs));
+    localStorage.setItem('niklausae_faqs', JSON.stringify(faqs));
   }, [faqs]);
 
   useEffect(() => {
-    localStorage.setItem('pars_mazi_blogs', JSON.stringify(blogs));
+    localStorage.setItem('niklausae_blogs', JSON.stringify(blogs));
   }, [blogs]);
 
   useEffect(() => {
-    localStorage.setItem('pars_mazi_feedback', JSON.stringify(feedbackList));
+    localStorage.setItem('niklausae_feedback', JSON.stringify(feedbackList));
   }, [feedbackList]);
 
   useEffect(() => {
-    localStorage.setItem('pars_mazi_read_feedback', JSON.stringify(readFeedbackIds));
+    localStorage.setItem('niklausae_read_feedback', JSON.stringify(readFeedbackIds));
   }, [readFeedbackIds]);
 
   // Synchronize document classes with dark mode state for Tailwind or extra CSS features
@@ -760,6 +760,23 @@ export default function App() {
       {/* Main Wrapper Container */}
       <main className="w-full max-w-4xl mx-auto px-4 md:px-6 relative z-10 flex flex-col gap-8 pt-6">
         
+        {/* Header (Always Visible & Interactive Nav) */}
+        {(() => {
+          const unreadFeedbackCount = feedbackList.filter(f => !readFeedbackIds.includes(f.id)).length;
+          return (
+            <Header 
+              darkMode={darkMode} 
+              setDarkMode={setDarkMode} 
+              activeStatusText={activeStatusText}
+              onOpenAdmin={() => setIsAdminOpen(true)}
+              visitCount={visitCount}
+              unreadFeedbackCount={unreadFeedbackCount}
+              activeView={activeView}
+              setActiveView={setActiveView}
+            />
+          );
+        })()}
+
         {activeView === 'faq' ? (
           <FaqView
             darkMode={darkMode}
@@ -783,23 +800,6 @@ export default function App() {
           />
         ) : (
           <>
-            {/* Header (Theme and Visits) */}
-            {!selectedCategoryId && (() => {
-              const unreadFeedbackCount = feedbackList.filter(f => !readFeedbackIds.includes(f.id)).length;
-              return (
-                <Header 
-                  darkMode={darkMode} 
-                  setDarkMode={setDarkMode} 
-                  activeStatusText={activeStatusText}
-                  onOpenAdmin={() => setIsAdminOpen(true)}
-                  visitCount={visitCount}
-                  unreadFeedbackCount={unreadFeedbackCount}
-                  onOpenFaq={() => setActiveView('faq')}
-                  onOpenBlog={() => setActiveView('blog')}
-                />
-              );
-            })()}
-
             {/* Active Announcement Carousel */}
             {!selectedCategoryId && activeAnnouncements.length > 0 && (
               <AnnouncementBanner
@@ -1003,7 +1003,7 @@ export default function App() {
         faqs={faqs}
       />
 
-      {/* Pars Blog Modal Overlay */}
+      {/* NIKLAUSAE Blog Modal Overlay */}
       <BlogModal
         isOpen={isBlogOpen}
         onClose={() => setIsBlogOpen(false)}

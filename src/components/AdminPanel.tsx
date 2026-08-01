@@ -141,14 +141,14 @@ export default function AdminPanel({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState('');
   const [adminPassword, setAdminPassword] = useState<string>(() => {
-    return localStorage.getItem('pars_mazi_admin_password') || 'pars123';
+    return localStorage.getItem('niklausae_admin_password') || 'niklausae123';
   });
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
 
   // Persist admin password changes to localStorage
   useEffect(() => {
-    localStorage.setItem('pars_mazi_admin_password', adminPassword);
+    localStorage.setItem('niklausae_admin_password', adminPassword);
   }, [adminPassword]);
 
   // Active Navigation Tab
@@ -235,19 +235,19 @@ export default function AdminPanel({
             'Authorization': `Bearer ${resendApiKey}`
           },
           body: JSON.stringify({
-            from: 'Pars Mazi Edit Archive <noreply@resend.dev>',
+            from: 'NIKLAUSAE Edit Archive <noreply@resend.dev>',
             to: emails,
             subject: customCampaignSubject,
             html: `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; background-color: #0d0d11; color: #ffffff; border-radius: 16px; border: 1px solid #22222a;">
                 <div style="text-align: center; border-bottom: 1px solid #22222a; padding-bottom: 15px; margin-bottom: 25px;">
-                  <h1 style="color: #8b5cf6; margin: 0; font-size: 24px; letter-spacing: 2px;">PARS MAZI</h1>
+                  <h1 style="color: #8b5cf6; margin: 0; font-size: 24px; letter-spacing: 2px;">NIKLAUSAE</h1>
                   <p style="color: #8e9099; margin: 5px 0 0 0; font-size: 11px; letter-spacing: 1px;">PRESET & EDIT ARCHIVE</p>
                 </div>
                 <h2 style="color: #f4f4f5; font-size: 18px; margin-bottom: 15px;">${customCampaignSubject}</h2>
                 <div style="white-space: pre-wrap; font-size: 14px; color: #d4d4d8; line-height: 1.6; margin-bottom: 25px;">${customCampaignBody}</div>
                 <div style="text-align: center; border-top: 1px solid #22222a; padding-top: 15px; margin-top: 25px;">
-                  <p style="font-size: 11px; color: #71717a; margin: 0;">Bu e-posta Pars Mazi bülten üyelerine gönderilmiştir.</p>
+                  <p style="font-size: 11px; color: #71717a; margin: 0;">Bu e-posta NIKLAUSAE bülten üyelerine gönderilmiştir.</p>
                   <p style="font-size: 11px; color: #71717a; margin: 5px 0 0 0;">Abonelikten çıkmak için sitemizi ziyaret edebilirsiniz.</p>
                 </div>
               </div>
@@ -348,7 +348,7 @@ export default function AdminPanel({
   const [effectDownloadUrl, setEffectDownloadUrl] = useState('#');
   const [effectFileSize, setEffectFileSize] = useState('1.2 MB');
   const [effectFileType, setEffectFileType] = useState('.ffx');
-  const [effectAuthor, setEffectAuthor] = useState('Pars Mazi');
+  const [effectAuthor, setEffectAuthor] = useState('NIKLAUSAE');
   const [effectViews, setEffectViews] = useState(150);
   const [effectDownloads, setEffectDownloads] = useState(45);
   const [effectRequirements, setEffectRequirements] = useState('Sapphire, Continuum');
@@ -371,7 +371,7 @@ export default function AdminPanel({
   const [blogSummary, setBlogSummary] = useState('');
   const [blogContent, setBlogContent] = useState('');
   const [blogImageUrl, setBlogImageUrl] = useState('');
-  const [blogAuthor, setBlogAuthor] = useState('Pars Mazi');
+  const [blogAuthor, setBlogAuthor] = useState('NIKLAUSAE');
 
   // FAQ Form State
   const [editingFaqId, setEditingFaqId] = useState<string | null>(null);
@@ -435,7 +435,7 @@ export default function AdminPanel({
     setBlogSummary('');
     setBlogContent('');
     setBlogImageUrl('');
-    setBlogAuthor('Pars Mazi');
+    setBlogAuthor('NIKLAUSAE');
   };
 
   const handleDeleteBlog = async (id: string) => {
@@ -523,7 +523,7 @@ export default function AdminPanel({
     let unsub: (() => void) | undefined;
 
     if (!isFirebaseConfigured()) {
-      const saved = localStorage.getItem('pars_mazi_announcements');
+      const saved = localStorage.getItem('niklausae_announcements');
       if (saved) {
         try {
           setAnnouncements(JSON.parse(saved));
@@ -535,14 +535,14 @@ export default function AdminPanel({
         const defaultAnn = [
           {
             id: 'default-1',
-            text: '🎉 YENİ GÜNCELLEME: Pars Mazi Edit Arşivi v2 Aktif Edildi! Tüm renk ayarları (CC) güncellendi.',
+            text: '🎉 YENİ GÜNCELLEME: NIKLAUSAE Edit Arşivi v2 Aktif Edildi! Tüm renk ayarları (CC) güncellendi.',
             type: 'info' as const,
             active: true,
             createdAt: new Date().toLocaleDateString('tr-TR'),
           },
         ];
         setAnnouncements(defaultAnn);
-        localStorage.setItem('pars_mazi_announcements', JSON.stringify(defaultAnn));
+        localStorage.setItem('niklausae_announcements', JSON.stringify(defaultAnn));
       }
     } else {
       unsub = subscribeToAnnouncements((anns) => {
@@ -561,7 +561,7 @@ export default function AdminPanel({
     }
 
     // Check if previously authenticated in this session
-    const storedAuth = sessionStorage.getItem('pars_mazi_admin_authed');
+    const storedAuth = sessionStorage.getItem('niklausae_admin_authed');
     if (storedAuth === 'true') {
       setIsAuthenticated(true);
     }
@@ -584,7 +584,7 @@ export default function AdminPanel({
     } else {
       const updated = feedbackList.filter(f => f.id !== id);
       setFeedbackList(updated);
-      localStorage.setItem('pars_mazi_feedback', JSON.stringify(updated));
+      localStorage.setItem('niklausae_feedback', JSON.stringify(updated));
     }
   };
 
@@ -592,7 +592,7 @@ export default function AdminPanel({
     setReadFeedbackIds(prev => {
       if (prev.includes(id)) return prev;
       const updated = [...prev, id];
-      localStorage.setItem('pars_mazi_read_feedback', JSON.stringify(updated));
+      localStorage.setItem('niklausae_read_feedback', JSON.stringify(updated));
       return updated;
     });
   };
@@ -601,7 +601,7 @@ export default function AdminPanel({
     const allIds = feedbackList.map(f => f.id);
     setReadFeedbackIds(prev => {
       const combined = Array.from(new Set([...prev, ...allIds]));
-      localStorage.setItem('pars_mazi_read_feedback', JSON.stringify(combined));
+      localStorage.setItem('niklausae_read_feedback', JSON.stringify(combined));
       return combined;
     });
   };
@@ -609,7 +609,7 @@ export default function AdminPanel({
   // Save announcements to localStorage whenever it changes
   const saveAnnouncements = (newAnns: Announcement[]) => {
     setAnnouncements(newAnns);
-    localStorage.setItem('pars_mazi_announcements', JSON.stringify(newAnns));
+    localStorage.setItem('niklausae_announcements', JSON.stringify(newAnns));
   };
 
   // Login handler
@@ -631,7 +631,7 @@ export default function AdminPanel({
 
     if (password === currentPassword || password === 'admin') {
       setIsAuthenticated(true);
-      sessionStorage.setItem('pars_mazi_admin_authed', 'true');
+      sessionStorage.setItem('niklausae_admin_authed', 'true');
       setAuthError('');
     } else {
       setAuthError('Hatalı Şifre!');
@@ -640,7 +640,7 @@ export default function AdminPanel({
 
   const handleLogout = () => {
     setIsAuthenticated(false);
-    sessionStorage.removeItem('pars_mazi_admin_authed');
+    sessionStorage.removeItem('niklausae_admin_authed');
     setPassword('');
   };
 
@@ -1017,7 +1017,7 @@ export default function AdminPanel({
     setEffectDownloadUrl('#');
     setEffectFileSize('1.2 MB');
     setEffectFileType('.ffx');
-    setEffectAuthor('Pars Mazi');
+    setEffectAuthor('NIKLAUSAE');
     setEffectRequirements('Sapphire, Continuum');
     setEffectBeforeImage('');
     setEffectAfterImage('');
@@ -1144,7 +1144,7 @@ export default function AdminPanel({
       setEffectDownloadUrl('#');
       setEffectFileSize('1.8 MB');
       setEffectFileType('.ffx');
-      setEffectAuthor('Pars Mazi');
+      setEffectAuthor('NIKLAUSAE');
       setEffectRequirements('Magic Bullet Looks, Sapphire');
       setEffectCategoryId('renk-efektleri');
     } else if (presetType === 'shake') {
@@ -1153,7 +1153,7 @@ export default function AdminPanel({
       setEffectDownloadUrl('#');
       setEffectFileSize('420 KB');
       setEffectFileType('.ffx');
-      setEffectAuthor('Pars Mazi');
+      setEffectAuthor('NIKLAUSAE');
       setEffectRequirements('Sapphire');
       setEffectCategoryId('shakeler');
     } else if (presetType === 'trans') {
@@ -1162,7 +1162,7 @@ export default function AdminPanel({
       setEffectDownloadUrl('#');
       setEffectFileSize('850 KB');
       setEffectFileType('.ffx');
-      setEffectAuthor('Pars Mazi');
+      setEffectAuthor('NIKLAUSAE');
       setEffectRequirements('Sapphire, Continuum');
       setEffectCategoryId('gecis-efektleri');
     } else if (presetType === 'sfx') {
@@ -1171,7 +1171,7 @@ export default function AdminPanel({
       setEffectDownloadUrl('#');
       setEffectFileSize('2.5 MB');
       setEffectFileType('.wav');
-      setEffectAuthor('Pars Mazi');
+      setEffectAuthor('NIKLAUSAE');
       setEffectRequirements('Yok (Ses Dosyası)');
       setEffectCategoryId('ses-efektleri');
     }
@@ -1225,7 +1225,7 @@ export default function AdminPanel({
             <div>
               <div className="flex items-center gap-2.5">
                 <h2 className="text-sm sm:text-base font-black tracking-wider uppercase font-mono bg-gradient-to-r from-white via-neutral-100 to-neutral-400 bg-clip-text text-transparent">
-                  Pars Mazi Studio
+                  NIKLAUSAE Studio
                 </h2>
                 <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[8px] font-black tracking-widest uppercase font-mono bg-violet-500/10 text-violet-400 border border-violet-500/20">
                   v2.0 PRO
@@ -1566,7 +1566,7 @@ export default function AdminPanel({
                     <div className="flex flex-col gap-5 animate-fade-in">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[10px] font-black uppercase text-neutral-500">ANA BAŞLIK (ÖRN: PARS MAZI)</label>
+                          <label className="text-[10px] font-black uppercase text-neutral-500">ANA BAŞLIK (ÖRN: NIKLAUSAE)</label>
                           <input
                             type="text"
                             value={siteTitle}
@@ -1625,7 +1625,7 @@ export default function AdminPanel({
                               const val = parseInt(e.target.value, 10);
                               if (!isNaN(val)) {
                                 setVisitCount(val);
-                                localStorage.setItem('pars_mazi_visits', val.toString());
+                                localStorage.setItem('niklausae_visits', val.toString());
                                 if (isFirebaseConfigured()) {
                                   setVisitorCountInFirebase(val).catch(err => console.error(err));
                                 }
@@ -2761,7 +2761,7 @@ export default function AdminPanel({
                           type="text"
                           value={blogAuthor}
                           onChange={(e) => setBlogAuthor(e.target.value)}
-                          placeholder="Pars Mazi"
+                          placeholder="NIKLAUSAE"
                           className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
                             darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
                           }`}
@@ -2806,7 +2806,7 @@ export default function AdminPanel({
                             setBlogSummary('');
                             setBlogContent('');
                             setBlogImageUrl('');
-                            setBlogAuthor('Pars Mazi');
+                            setBlogAuthor('NIKLAUSAE');
                           }}
                           className={`py-2 px-4 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
                             darkMode ? 'bg-neutral-900 hover:bg-neutral-850 text-neutral-400 hover:text-white' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-600'

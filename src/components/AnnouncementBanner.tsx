@@ -27,7 +27,7 @@ export default function AnnouncementBanner({
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('pars_mazi_dismissed_announcements');
+      const saved = localStorage.getItem('niklausae_dismissed_announcements');
       if (saved) {
         setDismissedIds(JSON.parse(saved));
       }
@@ -40,7 +40,7 @@ export default function AnnouncementBanner({
     e.stopPropagation();
     const updated = [...dismissedIds, id];
     setDismissedIds(updated);
-    localStorage.setItem('pars_mazi_dismissed_announcements', JSON.stringify(updated));
+    localStorage.setItem('niklausae_dismissed_announcements', JSON.stringify(updated));
   };
 
   const visibleAnnouncements = activeAnnouncements.filter(ann => !dismissedIds.includes(ann.id));

@@ -18,7 +18,7 @@ export default function BlogView({ darkMode, blogs, onBack }: BlogViewProps) {
   const selectedPost = blogs.find(p => p.id === selectedPostId);
 
   // Extract tags/categories automatically or define default ones
-  const categories = ['all', ...Array.from(new Set(blogs.map(b => b.author.includes('Pars') ? 'Eğitsel' : 'İnceleme')))];
+  const categories = ['all', ...Array.from(new Set(blogs.map(b => b.author.includes('NIKLAUSAE') ? 'Eğitsel' : 'İnceleme')))];
 
   const getPostCategory = (post: BlogPost) => {
     return post.title.toLowerCase().includes('render') || post.title.toLowerCase().includes('ayar') 
@@ -85,7 +85,7 @@ export default function BlogView({ darkMode, blogs, onBack }: BlogViewProps) {
               </button>
 
               <span className="text-[10px] font-mono font-black uppercase tracking-widest text-neutral-500">
-                Pars Editörlük Okulu
+                NIKLAUSAE Editörlük Okulu
               </span>
             </div>
 
@@ -93,7 +93,7 @@ export default function BlogView({ darkMode, blogs, onBack }: BlogViewProps) {
             <div className="flex flex-col gap-1">
               <h1 className="text-xl md:text-2xl font-black uppercase tracking-tight flex items-center gap-2.5">
                 <BookOpen className="w-6 h-6 text-violet-500 shrink-0" />
-                Pars Blog & Editör Kütüphanesi
+                NIKLAUSAE Blog & Editör Kütüphanesi
               </h1>
               <p className="text-[11px] text-neutral-500 max-w-xl font-medium">
                 Video kurgularınızı sinematik seviyeye ulaştırmak için pratik teknikler, sektör ipuçları ve After Effects öğretici yazıları.
@@ -359,7 +359,7 @@ export default function BlogView({ darkMode, blogs, onBack }: BlogViewProps) {
                       <span className={`text-xs font-extrabold ${darkMode ? 'text-white' : 'text-neutral-800'}`}>
                         {selectedPost.author}
                       </span>
-                      <span className="text-[10px] text-neutral-500 font-bold mt-0.5">Yazar • Pars Mazi</span>
+                      <span className="text-[10px] text-neutral-500 font-bold mt-0.5">Yazar • NIKLAUSAE</span>
                     </div>
                   </div>
 
@@ -424,7 +424,7 @@ export default function BlogView({ darkMode, blogs, onBack }: BlogViewProps) {
                 {/* Editor Notes signature */}
                 <div className="mt-8 pt-6 border-t border-dashed border-neutral-800/40 flex items-center justify-between">
                   <span className="text-[10px] font-mono font-black tracking-widest text-neutral-500 uppercase">
-                    © PARS MAZI EDİTÖR AKADEMİSİ
+                    © NIKLAUSAE EDİTÖR AKADEMİSİ
                   </span>
 
                   <button

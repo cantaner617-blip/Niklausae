@@ -52,7 +52,7 @@ export const subscribeEmail = async (email: string): Promise<{ success: boolean;
   } else {
     // Fallback to local storage
     try {
-      const saved = localStorage.getItem('pars_mazi_subscribers');
+      const saved = localStorage.getItem('niklausae_subscribers');
       const subscribers: Subscriber[] = saved ? JSON.parse(saved) : [];
       
       if (subscribers.some(s => s.email === normalizedEmail)) {
@@ -60,7 +60,7 @@ export const subscribeEmail = async (email: string): Promise<{ success: boolean;
       }
 
       subscribers.push({ email: normalizedEmail, subscribedAt });
-      localStorage.setItem('pars_mazi_subscribers', JSON.stringify(subscribers));
+      localStorage.setItem('niklausae_subscribers', JSON.stringify(subscribers));
       return { success: true, message: 'Bültene başarıyla abone oldunuz! Teşekkür ederiz. (Local)' };
     } catch (e) {
       console.error("Local subscription error:", e);
@@ -84,11 +84,11 @@ export const unsubscribeEmail = async (email: string): Promise<boolean> => {
     }
   } else {
     try {
-      const saved = localStorage.getItem('pars_mazi_subscribers');
+      const saved = localStorage.getItem('niklausae_subscribers');
       if (saved) {
         const subscribers: Subscriber[] = JSON.parse(saved);
         const filtered = subscribers.filter(s => s.email !== normalizedEmail);
-        localStorage.setItem('pars_mazi_subscribers', JSON.stringify(filtered));
+        localStorage.setItem('niklausae_subscribers', JSON.stringify(filtered));
         return true;
       }
       return false;
@@ -117,7 +117,7 @@ export const fetchSubscribers = async (): Promise<Subscriber[]> => {
       return [];
     }
   } else {
-    const saved = localStorage.getItem('pars_mazi_subscribers');
+    const saved = localStorage.getItem('niklausae_subscribers');
     if (saved) {
       try {
         const list: Subscriber[] = JSON.parse(saved);
@@ -160,7 +160,7 @@ export const fetchCampaigns = async (): Promise<Campaign[]> => {
       return [];
     }
   } else {
-    const saved = localStorage.getItem('pars_mazi_campaigns');
+    const saved = localStorage.getItem('niklausae_campaigns');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -190,10 +190,10 @@ export const logCampaign = async (campaign: Campaign): Promise<void> => {
     }
   } else {
     try {
-      const saved = localStorage.getItem('pars_mazi_campaigns');
+      const saved = localStorage.getItem('niklausae_campaigns');
       const list: Campaign[] = saved ? JSON.parse(saved) : [];
       list.push(campaign);
-      localStorage.setItem('pars_mazi_campaigns', JSON.stringify(list));
+      localStorage.setItem('niklausae_campaigns', JSON.stringify(list));
     } catch (e) {
       console.error(e);
     }
@@ -216,12 +216,12 @@ export const notifySubscribersOfNewEffect = async (
   }
 
   const subject = `🔥 YENİ EFEKT: "${effectName}" Yayında!`;
-  const bodyText = `Merhaba Editör Dostum,\n\nPARS MAZI arşivine yeni bir preset eklendi!\n\n✨ Efekt Adı: ${effectName}\n📁 Kategori: ${categoryName}\n👤 Hazırlayan: ${author}\n\nKurgularını profesyonel seviyeye taşımak için hemen sitemizi ziyaret et ve yeni efekti indir!\n\nİyi çalışmalar,\nPars Mazi`;
+  const bodyText = `Merhaba Editör Dostum,\n\nNIKLAUSAE arşivine yeni bir preset eklendi!\n\n✨ Efekt Adı: ${effectName}\n📁 Kategori: ${categoryName}\n👤 Hazırlayan: ${author}\n\nKurgularını profesyonel seviyeye taşımak için hemen sitemizi ziyaret et ve yeni efekti indir!\n\nİyi çalışmalar,\nNIKLAUSAE`;
 
   const htmlBody = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0d0d11; color: #ffffff; border-radius: 16px; border: 1px solid #22222a;">
       <div style="text-align: center; border-bottom: 1px solid #22222a; padding-bottom: 15px; margin-bottom: 20px;">
-        <h1 style="color: #8b5cf6; margin: 0; font-size: 24px; letter-spacing: 2px;">PARS MAZI</h1>
+        <h1 style="color: #8b5cf6; margin: 0; font-size: 24px; letter-spacing: 2px;">NIKLAUSAE</h1>
         <p style="color: #8e9099; margin: 5px 0 0 0; font-size: 12px; letter-spacing: 1px;">PRESET & EDIT ARCHIVE</p>
       </div>
       
@@ -239,7 +239,7 @@ export const notifySubscribersOfNewEffect = async (
       </div>
       
       <div style="text-align: center; border-top: 1px solid #22222a; padding-top: 15px; margin-top: 25px;">
-        <p style="font-size: 11px; color: #71717a; margin: 0;">Bu e-posta Pars Mazi bülten abonelerine gönderilmiştir.</p>
+        <p style="font-size: 11px; color: #71717a; margin: 0;">Bu e-posta NIKLAUSAE bülten abonelerine gönderilmiştir.</p>
         <p style="font-size: 11px; color: #71717a; margin: 5px 0 0 0;">Abonelikten çıkmak için sitemizi ziyaret edebilir veya bu e-postayı yoksayabilirsiniz.</p>
       </div>
     </div>
@@ -265,7 +265,7 @@ export const notifySubscribersOfNewEffect = async (
           'Authorization': `Bearer ${resendApiKey}`
         },
         body: JSON.stringify({
-          from: 'Pars Mazi Edit Archive <noreply@resend.dev>',
+          from: 'NIKLAUSAE Edit Archive <noreply@resend.dev>',
           to: emails,
           subject: subject,
           html: htmlBody,

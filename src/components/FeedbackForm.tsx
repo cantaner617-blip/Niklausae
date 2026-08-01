@@ -21,7 +21,7 @@ export default function FeedbackForm({ darkMode }: FeedbackFormProps) {
 
   // Load previous submissions on mount
   useEffect(() => {
-    const stored = localStorage.getItem('pars_mazi_feedback');
+    const stored = localStorage.getItem('niklausae_feedback');
     if (stored) {
       try {
         setHistory(JSON.parse(stored));
@@ -63,7 +63,7 @@ export default function FeedbackForm({ darkMode }: FeedbackFormProps) {
 
       const updatedHistory = [newSubmission, ...history];
       setHistory(updatedHistory);
-      localStorage.setItem('pars_mazi_feedback', JSON.stringify(updatedHistory));
+      localStorage.setItem('niklausae_feedback', JSON.stringify(updatedHistory));
 
       setIsSuccess(true);
       
@@ -149,7 +149,7 @@ export default function FeedbackForm({ darkMode }: FeedbackFormProps) {
                 <div>
                   <h4 className="text-lg font-black tracking-tight">Mesajın İletildi!</h4>
                   <p className="text-xs text-neutral-500 font-medium leading-relaxed mt-1.5 max-w-xs mx-auto">
-                    Geri bildiriminiz başarıyla Pars Mazi ekibine ulaştırıldı. Editör deneyimini iyileştirmek için çalışmaya devam ediyoruz!
+                    Geri bildiriminiz başarıyla NIKLAUSAE ekibine ulaştırıldı. Editör deneyimini iyileştirmek için çalışmaya devam ediyoruz!
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 w-full mt-2">
