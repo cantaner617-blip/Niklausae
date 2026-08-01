@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Moon, Sun, Users, Settings } from 'lucide-react';
+import { Moon, Sun, Users, Settings, MoreVertical, HelpCircle, BookOpen } from 'lucide-react';
 import { playSynthesizedSFX } from '../lib/audioGenerator';
 
 interface HeaderProps {
@@ -7,6 +7,8 @@ interface HeaderProps {
   setDarkMode: (dark: boolean) => void;
   activeStatusText: string;
   onOpenAdmin: () => void;
+  onOpenFaq: () => void;
+  onOpenBlog: () => void;
   visitCount: number;
   unreadFeedbackCount?: number;
 }
@@ -16,6 +18,8 @@ export default function Header({
   setDarkMode, 
   activeStatusText, 
   onOpenAdmin, 
+  onOpenFaq,
+  onOpenBlog,
   visitCount,
   unreadFeedbackCount = 0
 }: HeaderProps) {
@@ -45,6 +49,8 @@ export default function Header({
 
   const [secretClicks, setSecretClicks] = useState(0);
   const [lastClickTime, setLastClickTime] = useState(0);
+
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleVisitorCardClick = () => {
     const now = Date.now();
@@ -103,34 +109,99 @@ export default function Header({
           </div>
         </button>
 
-        {/* Visitor Counter with Secret Admin Entry */}
-        <div
-          id="visitor-counter-card"
-          onClick={handleVisitorCardClick}
-          className={`relative flex items-center gap-4 px-5 py-2.5 rounded-2xl border transition-all duration-300 select-none cursor-pointer ${
-            darkMode
-              ? 'bg-[#121214] border-neutral-800 text-white hover:border-neutral-700/50'
-              : 'bg-white border-neutral-200 text-neutral-800 hover:border-neutral-300/50'
-          }`}
-          style={{ boxShadow: darkMode ? '0 4px 20px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,0,0,0.05)' }}
-          title={unreadFeedbackCount > 0 ? `${unreadFeedbackCount} Yeni Geri Bildirim` : undefined}
-        >
-          {unreadFeedbackCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-5 w-5 bg-rose-500 text-[10px] font-black text-white items-center justify-center font-mono shadow-[0_0_12px_rgba(244,63,94,0.7)] border border-white dark:border-[#121214]">
-                {unreadFeedbackCount}
+        {/* Right Controls Area: Visitor Counter and 3-Dot menu */}
+        <div className="flex items-center gap-3">
+          {/* Visitor Counter with Secret Admin Entry */}
+          <div
+            id="visitor-counter-card"
+            onClick={handleVisitorCardClick}
+            className={`relative flex items-center gap-4 px-5 py-2.5 rounded-2xl border transition-all duration-300 select-none cursor-pointer ${
+              darkMode
+                ? 'bg-[#121214] border-neutral-800 text-white hover:border-neutral-700/50'
+                : 'bg-white border-neutral-200 text-neutral-800 hover:border-neutral-300/50'
+            }`}
+            style={{ boxShadow: darkMode ? '0 4px 20px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,0,0,0.05)' }}
+            title={unreadFeedbackCount > 0 ? `${unreadFeedbackCount} Yeni Geri Bildirim` : undefined}
+          >
+            {unreadFeedbackCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-5 w-5 bg-rose-500 text-[10px] font-black text-white items-center justify-center font-mono shadow-[0_0_12px_rgba(244,63,94,0.7)] border border-white dark:border-[#121214]">
+                  {unreadFeedbackCount}
+                </span>
               </span>
-            </span>
-          )}
-          <div className="flex flex-col items-start leading-none">
-            <span className="text-[9px] tracking-wider text-neutral-500 font-bold uppercase">TOPLAM ZİYARET</span>
-            <span className="text-base font-extrabold tracking-wide mt-1 font-mono">
-              {visitCount.toLocaleString('tr-TR')}
-            </span>
+            )}
+            <div className="flex flex-col items-start leading-none">
+              <span className="text-[9px] tracking-wider text-neutral-500 font-bold uppercase">TOPLAM ZİYARET</span>
+              <span className="text-base font-extrabold tracking-wide mt-1 font-mono">
+                {visitCount.toLocaleString('tr-TR')}
+              </span>
+            </div>
+            <div className={`p-2 rounded-xl ${darkMode ? 'bg-neutral-900 text-neutral-400' : 'bg-neutral-100 text-neutral-500'}`}>
+              <Users className="w-4.5 h-4.5 animate-pulse" />
+            </div>
           </div>
-          <div className={`p-2 rounded-xl ${darkMode ? 'bg-neutral-900 text-neutral-400' : 'bg-neutral-100 text-neutral-500'}`}>
-            <Users className="w-4.5 h-4.5 animate-pulse" />
+
+          {/* 3-Dot Dropdown Menu */}
+          <div className="relative">
+            <button
+              id="header-three-dots-btn"
+              onClick={() => {
+                setMenuOpen(!menuOpen);
+                playSynthesizedSFX('category-click');
+              }}
+              className={`flex items-center justify-center p-3 rounded-2xl border transition-all duration-300 select-none cursor-pointer ${
+                darkMode
+                  ? 'bg-[#121214] border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-700'
+                  : 'bg-white border-neutral-200 text-neutral-500 hover:text-neutral-800 hover:border-neutral-300'
+              }`}
+              style={{ boxShadow: darkMode ? '0 4px 20px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,0,0,0.05)' }}
+              title="Daha Fazlası"
+            >
+              <MoreVertical className="w-5 h-5" />
+            </button>
+
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+                <div
+                  className={`absolute right-0 mt-2.5 w-60 rounded-2xl border p-2 z-50 transition-all duration-200 shadow-xl ${
+                    darkMode
+                      ? 'bg-[#121214] border-neutral-800 text-white'
+                      : 'bg-white border-neutral-200 text-neutral-800'
+                  }`}
+                  style={{
+                    boxShadow: darkMode ? '0 10px 30px rgba(0,0,0,0.6)' : '0 10px 30px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  <button
+                    onClick={() => {
+                      onOpenFaq();
+                      setMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-left text-xs font-black transition-all cursor-pointer ${
+                      darkMode ? 'hover:bg-neutral-800/60' : 'hover:bg-neutral-100'
+                    }`}
+                  >
+                    <HelpCircle className="w-4.5 h-4.5 text-purple-500" />
+                    <span>Sıkça Sorulan Sorular (SSS)</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      onOpenBlog();
+                      setMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-left text-xs font-black transition-all cursor-pointer ${
+                      darkMode ? 'hover:bg-neutral-800/60' : 'hover:bg-neutral-100'
+                    }`}
+                  >
+                    <BookOpen className="w-4.5 h-4.5 text-purple-500" />
+                    <span>Pars Blog</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -10,8 +10,12 @@ import FeedbackForm from './components/FeedbackForm';
 import CategoryDetail from './components/CategoryDetail';
 import AdminPanel from './components/AdminPanel';
 import AnnouncementBanner from './components/AnnouncementBanner';
-import { CATEGORIES, EFFECT_ITEMS, REQUIRED_PLUGINS } from './data';
-import { EffectItem, Category, RequiredPlugin, FeedbackSubmission } from './types';
+import FaqModal from './components/FaqModal';
+import BlogModal from './components/BlogModal';
+import FaqView from './components/FaqView';
+import BlogView from './components/BlogView';
+import { CATEGORIES, EFFECT_ITEMS, REQUIRED_PLUGINS, DEFAULT_FAQS, DEFAULT_BLOG_POSTS } from './data';
+import { EffectItem, Category, RequiredPlugin, FeedbackSubmission, FaqItem, BlogPost } from './types';
 import { MessageSquare, ExternalLink, Megaphone, ChevronLeft, ChevronRight } from 'lucide-react';
 import { 
   isFirebaseConfigured, 
@@ -25,7 +29,9 @@ import {
   incrementVisitorCount,
   setVisitorCountInFirebase,
   subscribeToPlugins,
-  subscribeToFeedback
+  subscribeToFeedback,
+  subscribeToFaqs,
+  subscribeToBlogs
 } from './lib/firebase';
 
 export default function App() {
@@ -37,6 +43,11 @@ export default function App() {
 
   // Admin Panel Visibility
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
+
+  // FAQ and Blog Modals/Views Visibility
+  const [activeView, setActiveView] = useState<'home' | 'faq' | 'blog'>('home');
+  const [isFaqOpen, setIsFaqOpen] = useState<boolean>(false);
+  const [isBlogOpen, setIsBlogOpen] = useState<boolean>(false);
 
   // Site configuration states
   const [siteTitle, setSiteTitle] = useState<string>(() => {
@@ -148,6 +159,30 @@ export default function App() {
       }
     }
     return REQUIRED_PLUGINS;
+  });
+
+  const [faqs, setFaqs] = useState<FaqItem[]>(() => {
+    const saved = localStorage.getItem('pars_mazi_faqs');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return DEFAULT_FAQS;
+  });
+
+  const [blogs, setBlogs] = useState<BlogPost[]>(() => {
+    const saved = localStorage.getItem('pars_mazi_blogs');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return DEFAULT_BLOG_POSTS;
   });
 
   // Realtime visitor count state
@@ -271,6 +306,20 @@ export default function App() {
       }
     });
 
+    // Subscribe to FAQs
+    const unsubFaqs = subscribeToFaqs((firebaseFaqs) => {
+      if (firebaseFaqs) {
+        setFaqs(firebaseFaqs);
+      }
+    });
+
+    // Subscribe to Blogs
+    const unsubBlogs = subscribeToBlogs((firebaseBlogs) => {
+      if (firebaseBlogs) {
+        setBlogs(firebaseBlogs);
+      }
+    });
+
     // Subscribe to Feedback real-time updates
     const unsubFeedback = subscribeToFeedback((firebaseFeedback) => {
       if (firebaseFeedback) {
@@ -284,6 +333,8 @@ export default function App() {
       unsubEffects();
       unsubPlugins();
       unsubFeedback();
+      unsubFaqs();
+      unsubBlogs();
     };
   }, []);
 
@@ -584,6 +635,14 @@ export default function App() {
   }, [requiredPlugins]);
 
   useEffect(() => {
+    localStorage.setItem('pars_mazi_faqs', JSON.stringify(faqs));
+  }, [faqs]);
+
+  useEffect(() => {
+    localStorage.setItem('pars_mazi_blogs', JSON.stringify(blogs));
+  }, [blogs]);
+
+  useEffect(() => {
     localStorage.setItem('pars_mazi_feedback', JSON.stringify(feedbackList));
   }, [feedbackList]);
 
@@ -701,125 +760,152 @@ export default function App() {
       {/* Main Wrapper Container */}
       <main className="w-full max-w-4xl mx-auto px-4 md:px-6 relative z-10 flex flex-col gap-8 pt-6">
         
-        {/* Header (Theme and Visits) */}
-        {!selectedCategoryId && (() => {
-          const unreadFeedbackCount = feedbackList.filter(f => !readFeedbackIds.includes(f.id)).length;
-          return (
-            <Header 
-              darkMode={darkMode} 
-              setDarkMode={setDarkMode} 
-              activeStatusText={activeStatusText}
-              onOpenAdmin={() => setIsAdminOpen(true)}
-              visitCount={visitCount}
-              unreadFeedbackCount={unreadFeedbackCount}
-            />
-          );
-        })()}
-
-        {/* Active Announcement Carousel */}
-        {!selectedCategoryId && activeAnnouncements.length > 0 && (
-          <AnnouncementBanner
+        {activeView === 'faq' ? (
+          <FaqView
             darkMode={darkMode}
-            activeAnnouncements={activeAnnouncements}
-            currentAnnIndex={currentAnnIndex}
-            setCurrentAnnIndex={setCurrentAnnIndex}
-            onAnnouncementClick={handleAnnouncementClick}
-            isAnnHovered={isAnnHovered}
-            setIsAnnHovered={setIsAnnHovered}
+            faqs={faqs}
+            onBack={() => setActiveView('home')}
+            onOpenFeedback={() => {
+              setActiveView('home');
+              setTimeout(() => {
+                const element = document.getElementById('discord-section');
+                if (element) {
+                  element.scrollIntoView({ behavior: 'smooth' });
+                }
+              }, 300);
+            }}
           />
-        )}
-
-        {selectedCategoryId ? (
-          /* Full Page Focused Category Detail View from video */
-          <CategoryDetail
+        ) : activeView === 'blog' ? (
+          <BlogView
             darkMode={darkMode}
-            category={activeCategory!}
-            effects={effects}
-            onBack={() => setSelectedCategoryId(null)}
-            onSelectEffect={(effect) => setSelectedEffect(effect)}
+            blogs={blogs}
+            onBack={() => setActiveView('home')}
           />
         ) : (
-          /* Default Portal/Home View */
           <>
-            {/* Hero Section (Branding & Action Banners) */}
-            <Hero 
-              darkMode={darkMode}
-              onOpenRecent={handleOpenRecent}
-              onOpenPlugins={() => setIsPluginsModalOpen(true)}
-              siteTitle={siteTitle}
-              siteSubtitle={siteSubtitle}
-              siteBadge={siteBadge}
-            />
-
-            {/* Unified Effect Archive Hub Card */}
-            <section 
-              id="archive-hub-section"
-              className={`w-full rounded-3xl border p-6 md:p-8 flex flex-col gap-6 transition-all duration-300 relative ${
-                darkMode
-                  ? 'bg-[#121214] border-neutral-800/80 text-white shadow-xl'
-                  : 'bg-white border-neutral-200 text-neutral-800 shadow-sm'
-              }`}
-              style={{ 
-                boxShadow: darkMode 
-                  ? '0 10px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03)' 
-                  : '0 10px 40px rgba(0,0,0,0.02)' 
-              }}
-            >
-              {/* Ambient subtle glow effect inside card */}
-              {darkMode && (
-                <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-purple-500/5 blur-[120px] pointer-events-none z-0" />
-              )}
-
-              {/* Categories grid */}
-              <div className="relative z-10">
-                <Categories 
-                  darkMode={darkMode}
-                  categories={categories}
-                  selectedCategoryId={selectedCategoryId}
-                  onSelectCategory={handleSelectCategory}
+            {/* Header (Theme and Visits) */}
+            {!selectedCategoryId && (() => {
+              const unreadFeedbackCount = feedbackList.filter(f => !readFeedbackIds.includes(f.id)).length;
+              return (
+                <Header 
+                  darkMode={darkMode} 
+                  setDarkMode={setDarkMode} 
+                  activeStatusText={activeStatusText}
+                  onOpenAdmin={() => setIsAdminOpen(true)}
+                  visitCount={visitCount}
+                  unreadFeedbackCount={unreadFeedbackCount}
+                  onOpenFaq={() => setActiveView('faq')}
+                  onOpenBlog={() => setActiveView('blog')}
                 />
-              </div>
-            </section>
+              );
+            })()}
 
-            {/* Discord "Efekt Eklemek İstiyorum" Custom Banner */}
-            <section id="discord-section" className="w-full">
-              <a
-                href={discordUrl}
-                target="_blank"
-                rel="noreferrer"
-                className={`group w-full flex items-center justify-center gap-4 p-5 rounded-2xl border text-center font-black cursor-pointer transition-all duration-300 ${
-                  darkMode
-                    ? 'bg-[#121214] border-neutral-800 hover:border-indigo-500/40 text-white shadow-lg'
-                    : 'bg-white border-neutral-200 hover:border-indigo-500/40 text-neutral-800 shadow-sm'
-                }`}
-                style={{ boxShadow: darkMode ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 20px rgba(0,0,0,0.02)' }}
-              >
-                <div className="p-2.5 rounded-xl bg-[#5865F2] text-white shadow-[0_0_12px_rgba(88,101,242,0.35)] transition-transform duration-300 group-hover:scale-105">
-                  <MessageSquare className="w-5 h-5 fill-current" />
-                </div>
-                
-                <div className="flex flex-col items-start leading-tight text-left">
-                  <span className="text-sm tracking-tight font-black">Efekt Eklemek İstiyorum</span>
-                  <span className="text-[10px] text-neutral-500 font-medium mt-0.5">Topluluğumuza katılın, arşivimizi birlikte büyütelim</span>
-                </div>
-                
-                <ExternalLink className="w-4 h-4 text-neutral-500 group-hover:text-[#5865F2] group-hover:translate-x-0.5 transition-transform ml-auto" />
-              </a>
-            </section>
+            {/* Active Announcement Carousel */}
+            {!selectedCategoryId && activeAnnouncements.length > 0 && (
+              <AnnouncementBanner
+                darkMode={darkMode}
+                activeAnnouncements={activeAnnouncements}
+                currentAnnIndex={currentAnnIndex}
+                setCurrentAnnIndex={setCurrentAnnIndex}
+                onAnnouncementClick={handleAnnouncementClick}
+                isAnnHovered={isAnnHovered}
+                setIsAnnHovered={setIsAnnHovered}
+              />
+            )}
 
-            {/* Creator profile bio */}
-            <CreatorProfile 
-              darkMode={darkMode} 
-              creatorName={creatorName}
-              creatorTitle={creatorTitle}
-              creatorBio={creatorBio}
-              creatorExperience={creatorExperience}
-              creatorYoutube={creatorYoutube}
-              creatorInstagram={creatorInstagram}
-              creatorDiscord={creatorDiscord}
-              creatorTiktok={creatorTiktok}
-              creatorPortrait={creatorPortrait}
-            />
+            {selectedCategoryId ? (
+              /* Full Page Focused Category Detail View from video */
+              <CategoryDetail
+                darkMode={darkMode}
+                category={activeCategory!}
+                effects={effects}
+                onBack={() => setSelectedCategoryId(null)}
+                onSelectEffect={(effect) => setSelectedEffect(effect)}
+              />
+            ) : (
+              /* Default Portal/Home View */
+              <>
+                {/* Hero Section (Branding & Action Banners) */}
+                <Hero 
+                  darkMode={darkMode}
+                  onOpenRecent={handleOpenRecent}
+                  onOpenPlugins={() => setIsPluginsModalOpen(true)}
+                  siteTitle={siteTitle}
+                  siteSubtitle={siteSubtitle}
+                  siteBadge={siteBadge}
+                />
+
+                {/* Unified Effect Archive Hub Card */}
+                <section 
+                  id="archive-hub-section"
+                  className={`w-full rounded-3xl border p-6 md:p-8 flex flex-col gap-6 transition-all duration-300 relative ${
+                    darkMode
+                      ? 'bg-[#121214] border-neutral-800/80 text-white shadow-xl'
+                      : 'bg-white border-neutral-200 text-neutral-800 shadow-sm'
+                  }`}
+                  style={{ 
+                    boxShadow: darkMode 
+                      ? '0 10px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03)' 
+                      : '0 10px 40px rgba(0,0,0,0.02)' 
+                  }}
+                >
+                  {/* Ambient subtle glow effect inside card */}
+                  {darkMode && (
+                    <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-purple-500/5 blur-[120px] pointer-events-none z-0" />
+                  )}
+
+                  {/* Categories grid */}
+                  <div className="relative z-10">
+                    <Categories 
+                      darkMode={darkMode}
+                      categories={categories}
+                      selectedCategoryId={selectedCategoryId}
+                      onSelectCategory={handleSelectCategory}
+                    />
+                  </div>
+                </section>
+
+                {/* Discord "Efekt Eklemek İstiyorum" Custom Banner */}
+                <section id="discord-section" className="w-full">
+                  <a
+                    href={discordUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`group w-full flex items-center justify-center gap-4 p-5 rounded-2xl border text-center font-black cursor-pointer transition-all duration-300 ${
+                      darkMode
+                        ? 'bg-[#121214] border-neutral-800 hover:border-indigo-500/40 text-white shadow-lg'
+                        : 'bg-white border-neutral-200 hover:border-indigo-500/40 text-neutral-800 shadow-sm'
+                    }`}
+                    style={{ boxShadow: darkMode ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 20px rgba(0,0,0,0.02)' }}
+                  >
+                    <div className="p-2.5 rounded-xl bg-[#5865F2] text-white shadow-[0_0_12px_rgba(88,101,242,0.35)] transition-transform duration-300 group-hover:scale-105">
+                      <MessageSquare className="w-5 h-5 fill-current" />
+                    </div>
+                    
+                    <div className="flex flex-col items-start leading-tight text-left">
+                      <span className="text-sm tracking-tight font-black">Efekt Eklemek İstiyorum</span>
+                      <span className="text-[10px] text-neutral-500 font-medium mt-0.5">Topluluğumuza katılın, arşivimizi birlikte büyütelim</span>
+                    </div>
+                    
+                    <ExternalLink className="w-4 h-4 text-neutral-500 group-hover:text-[#5865F2] group-hover:translate-x-0.5 transition-transform ml-auto" />
+                  </a>
+                </section>
+
+                {/* Creator profile bio */}
+                <CreatorProfile 
+                  darkMode={darkMode} 
+                  creatorName={creatorName}
+                  creatorTitle={creatorTitle}
+                  creatorBio={creatorBio}
+                  creatorExperience={creatorExperience}
+                  creatorYoutube={creatorYoutube}
+                  creatorInstagram={creatorInstagram}
+                  creatorDiscord={creatorDiscord}
+                  creatorTiktok={creatorTiktok}
+                  creatorPortrait={creatorPortrait}
+                />
+              </>
+            )}
           </>
         )}
 
@@ -903,6 +989,26 @@ export default function App() {
         setFeedbackList={setFeedbackList}
         readFeedbackIds={readFeedbackIds}
         setReadFeedbackIds={setReadFeedbackIds}
+        faqs={faqs}
+        setFaqs={setFaqs}
+        blogs={blogs}
+        setBlogs={setBlogs}
+      />
+
+      {/* Sıkça Sorulan Sorular (FAQ) Modal Overlay */}
+      <FaqModal
+        isOpen={isFaqOpen}
+        onClose={() => setIsFaqOpen(false)}
+        darkMode={darkMode}
+        faqs={faqs}
+      />
+
+      {/* Pars Blog Modal Overlay */}
+      <BlogModal
+        isOpen={isBlogOpen}
+        onClose={() => setIsBlogOpen(false)}
+        darkMode={darkMode}
+        blogs={blogs}
       />
 
     </div>

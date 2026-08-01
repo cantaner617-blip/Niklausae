@@ -12,8 +12,8 @@ import {
   increment,
   updateDoc
 } from 'firebase/firestore';
-import { Category, EffectItem, FeedbackSubmission, RequiredPlugin } from '../types';
-import { CATEGORIES, EFFECT_ITEMS, REQUIRED_PLUGINS } from '../data';
+import { Category, EffectItem, FeedbackSubmission, RequiredPlugin, BlogPost, FaqItem } from '../types';
+import { CATEGORIES, EFFECT_ITEMS, REQUIRED_PLUGINS, DEFAULT_FAQS, DEFAULT_BLOG_POSTS } from '../data';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyA48AM49MOvEHzD9BHsV1Df7HtVBVtzMUw",
@@ -616,9 +616,114 @@ export const autoSeedDefaultData = async (): Promise<void> => {
       active: true
     } as Announcement));
 
+    // 6. Default FAQs
+    for (const faq of DEFAULT_FAQS) {
+      const docRef = doc(dbInstance, 'faqs', faq.id);
+      await setDoc(docRef, cleanObject(faq));
+    }
+
+    // 7. Default Blog Posts
+    for (const blog of DEFAULT_BLOG_POSTS) {
+      const docRef = doc(dbInstance, 'blog_posts', blog.id);
+      await setDoc(docRef, cleanObject(blog));
+    }
+
     console.log("Auto-seeding completed successfully!");
   } catch (error) {
     console.error("Error during auto-seeding:", error);
+    throw error;
+  }
+};
+
+// --- FAQ Operations ---
+export const subscribeToFaqs = (callback: (faqs: FaqItem[]) => void) => {
+  if (!isFirebaseConfigured()) return () => {};
+  try {
+    const dbInstance = getFirebaseDB();
+    const colRef = collection(dbInstance, 'faqs');
+    return onSnapshot(colRef, (querySnapshot) => {
+      const faqsList: FaqItem[] = [];
+      querySnapshot.forEach((docSnap) => {
+        faqsList.push(docSnap.data() as FaqItem);
+      });
+      faqsList.sort((a, b) => a.order - b.order);
+      callback(faqsList);
+    }, (error) => {
+      console.error("Realtime subscription error (faqs):", error);
+    });
+  } catch (e) {
+    console.error("Error starting realtime FAQs subscription:", e);
+    return () => {};
+  }
+};
+
+export const saveFaqToFirebase = async (faq: FaqItem): Promise<void> => {
+  if (!isFirebaseConfigured()) return;
+  try {
+    const dbInstance = getFirebaseDB();
+    const docRef = doc(dbInstance, 'faqs', faq.id);
+    await setDoc(docRef, cleanObject(faq));
+  } catch (error) {
+    console.error("Error saving FAQ to Firebase:", error);
+    throw error;
+  }
+};
+
+export const deleteFaqFromFirebase = async (id: string): Promise<void> => {
+  if (!isFirebaseConfigured()) return;
+  try {
+    const dbInstance = getFirebaseDB();
+    const docRef = doc(dbInstance, 'faqs', id);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error("Error deleting FAQ from Firebase:", error);
+    throw error;
+  }
+};
+
+// --- Blog Post Operations ---
+export const subscribeToBlogs = (callback: (blogs: BlogPost[]) => void) => {
+  if (!isFirebaseConfigured()) return () => {};
+  try {
+    const dbInstance = getFirebaseDB();
+    const colRef = collection(dbInstance, 'blog_posts');
+    return onSnapshot(colRef, (querySnapshot) => {
+      const blogsList: BlogPost[] = [];
+      querySnapshot.forEach((docSnap) => {
+        blogsList.push(docSnap.data() as BlogPost);
+      });
+      // Sort by date or ID descending (newest first)
+      blogsList.sort((a, b) => b.id.localeCompare(a.id));
+      callback(blogsList);
+    }, (error) => {
+      console.error("Realtime subscription error (blogs):", error);
+    });
+  } catch (e) {
+    console.error("Error starting realtime blogs subscription:", e);
+    return () => {};
+  }
+};
+
+export const saveBlogToFirebase = async (blog: BlogPost): Promise<void> => {
+  if (!isFirebaseConfigured()) return;
+  try {
+    const dbInstance = getFirebaseDB();
+    const docRef = doc(dbInstance, 'blog_posts', blog.id);
+    await setDoc(docRef, cleanObject(blog));
+  } catch (error) {
+    console.error("Error saving Blog Post to Firebase:", error);
+    throw error;
+  }
+};
+
+export const deleteBlogFromFirebase = async (id: string): Promise<void> => {
+  if (!isFirebaseConfigured()) return;
+  try {
+    const dbInstance = getFirebaseDB();
+    const docRef = doc(dbInstance, 'blog_posts', id);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error("Error deleting Blog Post from Firebase:", error);
     throw error;
   }
 };

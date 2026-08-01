@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as LucideIcons from 'lucide-react';
-import { Category, EffectItem, FeedbackSubmission, RequiredPlugin } from '../types';
+import { Category, EffectItem, FeedbackSubmission, RequiredPlugin, BlogPost, FaqItem } from '../types';
 import {
   isFirebaseConfigured,
   saveGeneralSettings,
@@ -18,7 +18,11 @@ import {
   subscribeToFeedback,
   deleteFeedbackFromFirebase,
   savePluginToFirebase,
-  deletePluginFromFirebase
+  deletePluginFromFirebase,
+  saveFaqToFirebase,
+  deleteFaqFromFirebase,
+  saveBlogToFirebase,
+  deleteBlogFromFirebase
 } from '../lib/firebase';
 
 interface AdminPanelProps {
@@ -67,6 +71,10 @@ interface AdminPanelProps {
   setFeedbackList: (list: FeedbackSubmission[]) => void;
   readFeedbackIds: string[];
   setReadFeedbackIds: (ids: string[] | ((prev: string[]) => string[])) => void;
+  faqs: FaqItem[];
+  setFaqs: (faqs: FaqItem[]) => void;
+  blogs: BlogPost[];
+  setBlogs: (blogs: BlogPost[]) => void;
 }
 
 interface Announcement {
@@ -123,6 +131,10 @@ export default function AdminPanel({
   setFeedbackList,
   readFeedbackIds,
   setReadFeedbackIds,
+  faqs,
+  setFaqs,
+  blogs,
+  setBlogs,
 }: AdminPanelProps) {
   // Authentication State
   const [password, setPassword] = useState('');
@@ -140,7 +152,7 @@ export default function AdminPanel({
   }, [adminPassword]);
 
   // Active Navigation Tab
-  const [activeTab, setActiveTab] = useState<'settings' | 'announcements' | 'categories' | 'effects' | 'feedback' | 'plugins'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'announcements' | 'categories' | 'effects' | 'feedback' | 'plugins' | 'blogs' | 'faqs'>('settings');
   const [masterTab, setMasterTab] = useState<'site' | 'content' | 'messages'>('site');
   const [settingsSubTab, setSettingsSubTab] = useState<'site' | 'profile' | 'social'>('site');
 
@@ -352,6 +364,159 @@ export default function AdminPanel({
   const [pluginRequirements, setPluginRequirements] = useState('');
   const [pluginVideoUrl, setPluginVideoUrl] = useState('');
   const [pluginDownloadUrl, setPluginDownloadUrl] = useState('');
+
+  // Blog Form State
+  const [editingBlogId, setEditingBlogId] = useState<string | null>(null);
+  const [blogTitle, setBlogTitle] = useState('');
+  const [blogSummary, setBlogSummary] = useState('');
+  const [blogContent, setBlogContent] = useState('');
+  const [blogImageUrl, setBlogImageUrl] = useState('');
+  const [blogAuthor, setBlogAuthor] = useState('Pars Mazi');
+
+  // FAQ Form State
+  const [editingFaqId, setEditingFaqId] = useState<string | null>(null);
+  const [faqQuestion, setFaqQuestion] = useState('');
+  const [faqAnswer, setFaqAnswer] = useState('');
+  const [faqOrder, setFaqOrder] = useState<number>(1);
+
+  const handleSaveBlog = async () => {
+    if (!blogTitle.trim() || !blogContent.trim()) {
+      alert('Başlık ve İçerik alanları zorunludur!');
+      return;
+    }
+
+    if (editingBlogId) {
+      const targetBlog = blogs.find(b => b.id === editingBlogId);
+      if (!targetBlog) return;
+      const updatedBlog: BlogPost = {
+        ...targetBlog,
+        title: blogTitle,
+        summary: blogSummary,
+        content: blogContent,
+        imageUrl: blogImageUrl,
+        author: blogAuthor,
+      };
+
+      if (isFirebaseConfigured()) {
+        try {
+          await saveBlogToFirebase(updatedBlog);
+        } catch (e) {
+          console.error("Firebase blog edit error:", e);
+        }
+      } else {
+        const updated = blogs.map(b => b.id === editingBlogId ? updatedBlog : b);
+        setBlogs(updated);
+      }
+      setEditingBlogId(null);
+    } else {
+      const newId = 'blog-' + Date.now();
+      const newBlog: BlogPost = {
+        id: newId,
+        title: blogTitle,
+        summary: blogSummary,
+        content: blogContent,
+        imageUrl: blogImageUrl,
+        author: blogAuthor,
+        date: new Date().toLocaleDateString('tr-TR'),
+      };
+
+      if (isFirebaseConfigured()) {
+        try {
+          await saveBlogToFirebase(newBlog);
+        } catch (e) {
+          console.error("Firebase blog add error:", e);
+        }
+      } else {
+        setBlogs([newBlog, ...blogs]);
+      }
+    }
+
+    setBlogTitle('');
+    setBlogSummary('');
+    setBlogContent('');
+    setBlogImageUrl('');
+    setBlogAuthor('Pars Mazi');
+  };
+
+  const handleDeleteBlog = async (id: string) => {
+    if (!confirm('Bu blog yazısını silmek istediğinize emin misiniz?')) return;
+    if (isFirebaseConfigured()) {
+      try {
+        await deleteBlogFromFirebase(id);
+      } catch (e) {
+        console.error("Firebase blog delete error:", e);
+      }
+    } else {
+      const filtered = blogs.filter(b => b.id !== id);
+      setBlogs(filtered);
+    }
+  };
+
+  const handleSaveFaq = async () => {
+    if (!faqQuestion.trim() || !faqAnswer.trim()) {
+      alert('Soru ve Cevap alanları zorunludur!');
+      return;
+    }
+
+    if (editingFaqId) {
+      const targetFaq = faqs.find(f => f.id === editingFaqId);
+      if (!targetFaq) return;
+      const updatedFaq: FaqItem = {
+        ...targetFaq,
+        question: faqQuestion,
+        answer: faqAnswer,
+        order: Number(faqOrder) || 1,
+      };
+
+      if (isFirebaseConfigured()) {
+        try {
+          await saveFaqToFirebase(updatedFaq);
+        } catch (e) {
+          console.error("Firebase FAQ edit error:", e);
+        }
+      } else {
+        const updated = faqs.map(f => f.id === editingFaqId ? updatedFaq : f);
+        setFaqs(updated);
+      }
+      setEditingFaqId(null);
+    } else {
+      const newId = 'faq-' + Date.now();
+      const newFaq: FaqItem = {
+        id: newId,
+        question: faqQuestion,
+        answer: faqAnswer,
+        order: Number(faqOrder) || 1,
+      };
+
+      if (isFirebaseConfigured()) {
+        try {
+          await saveFaqToFirebase(newFaq);
+        } catch (e) {
+          console.error("Firebase FAQ add error:", e);
+        }
+      } else {
+        setFaqs([...faqs, newFaq].sort((a, b) => a.order - b.order));
+      }
+    }
+
+    setFaqQuestion('');
+    setFaqAnswer('');
+    setFaqOrder(faqs.length + 2);
+  };
+
+  const handleDeleteFaq = async (id: string) => {
+    if (!confirm('Bu soruyu silmek istediğinize emin misiniz?')) return;
+    if (isFirebaseConfigured()) {
+      try {
+        await deleteFaqFromFirebase(id);
+      } catch (e) {
+        console.error("Firebase FAQ delete error:", e);
+      }
+    } else {
+      const filtered = faqs.filter(f => f.id !== id);
+      setFaqs(filtered);
+    }
+  };
 
   // Load announcements from localStorage or Firebase real-time subscription on mount
   useEffect(() => {
@@ -1033,53 +1198,69 @@ export default function AdminPanel({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
       <div
-        className={`w-full max-w-4xl rounded-3xl border overflow-hidden flex flex-col relative transition-all duration-300 ${
-          darkMode ? 'bg-[#0b0b0d] border-neutral-800 text-white shadow-2xl' : 'bg-white border-neutral-200 text-neutral-800 shadow-2xl'
+        className={`w-full max-w-6xl rounded-[32px] border overflow-hidden flex flex-col relative transition-all duration-500 ${
+          darkMode 
+            ? 'bg-[#09090b] border-neutral-800/80 text-white shadow-[0_25px_50px_-12px_rgba(0,0,0,0.7)]' 
+            : 'bg-white border-neutral-200 text-neutral-800 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)]'
         }`}
-        style={{ minHeight: '550px' }}
+        style={{ height: '85vh', maxHeight: '850px' }}
       >
-        {/* Banner Grid pattern */}
-        <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:20px_20px]" />
+        {/* Ambient Top Glow Effects */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-violet-600/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-600/5 rounded-full blur-[120px] pointer-events-none" />
+        
+        {/* Diagonal Tech-grid background */}
+        <div className="absolute inset-0 opacity-[0.015] pointer-events-none bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px]" />
 
-        {/* Header Bar */}
-        <div className={`p-6 border-b flex items-center justify-between relative z-10 ${darkMode ? 'border-neutral-800/80 bg-[#0d0d10]/90' : 'border-neutral-200 bg-neutral-50/90'}`}>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-violet-600 text-white shadow-[0_0_12px_rgba(124,58,237,0.4)]">
+        {/* Brand Header Bar */}
+        <div className={`px-8 py-5 border-b flex items-center justify-between relative z-10 shrink-0 ${
+          darkMode ? 'border-neutral-900 bg-[#0d0d11]/80 backdrop-blur-md' : 'border-neutral-150 bg-neutral-50/80 backdrop-blur-md'
+        }`}>
+          <div className="flex items-center gap-3.5">
+            <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-violet-600 to-purple-500 text-white shadow-[0_4px_20px_rgba(124,58,237,0.35)] hover:scale-105 transition-transform duration-300">
               <LucideIcons.Settings className="w-5 h-5 animate-spin-slow" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-black tracking-tight uppercase font-mono">PARS MAZI KONTROL PANELİ</h2>
+              <div className="flex items-center gap-2.5">
+                <h2 className="text-sm sm:text-base font-black tracking-wider uppercase font-mono bg-gradient-to-r from-white via-neutral-100 to-neutral-400 bg-clip-text text-transparent">
+                  Pars Mazi Studio
+                </h2>
+                <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[8px] font-black tracking-widest uppercase font-mono bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                  v2.0 PRO
+                </span>
+                
                 {isFirebaseConfigured() && (
-                  <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider font-mono border ${
+                  <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider font-mono border ${
                     autoSaveStatus === 'saving' ? 'bg-amber-500/10 border-amber-500/25 text-amber-400 animate-pulse' :
                     autoSaveStatus === 'saved' ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400' :
                     autoSaveStatus === 'error' ? 'bg-red-500/10 border-red-500/25 text-red-400' :
                     'bg-[#15151b] border-neutral-800 text-neutral-400'
                   }`}>
-                    <div className={`w-1 h-1 rounded-full ${
+                    <div className={`w-1.5 h-1.5 rounded-full ${
                       autoSaveStatus === 'saving' ? 'bg-amber-400' :
                       autoSaveStatus === 'saved' ? 'bg-emerald-400' :
                       autoSaveStatus === 'error' ? 'bg-red-400' :
                       'bg-neutral-500'
                     }`} />
                     {autoSaveStatus === 'saving' ? 'Kaydediliyor...' :
-                     autoSaveStatus === 'saved' ? 'Bulutla Eşitlendi' :
+                     autoSaveStatus === 'saved' ? 'Bulut Eşitlendi' :
                      autoSaveStatus === 'error' ? 'Hata!' :
-                     'Otomatik Kaydetme'}
+                     'Bulut Bağlantısı'}
                   </div>
                 )}
               </div>
-              <p className="text-[10px] text-neutral-500 font-bold uppercase font-mono">YÖNETİM & DÜZENLEME SİSTEMİ</p>
+              <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mt-0.5">KONTROL VE YÖNETİM MERKEZİ</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className={`w-9 h-9 rounded-full flex items-center justify-center border transition-all hover:scale-105 cursor-pointer ${
-              darkMode ? 'border-neutral-800 hover:bg-neutral-850 hover:text-white' : 'border-neutral-200 hover:bg-neutral-100 hover:text-neutral-900'
+            className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all duration-300 hover:rotate-90 cursor-pointer ${
+              darkMode 
+                ? 'border-neutral-800 bg-neutral-900/40 hover:bg-neutral-850 hover:text-white hover:border-neutral-750' 
+                : 'border-neutral-200 bg-neutral-100/50 hover:bg-neutral-200 hover:text-neutral-900'
             }`}
           >
             <LucideIcons.X className="w-4 h-4" />
@@ -1088,96 +1269,110 @@ export default function AdminPanel({
 
         {/* Auth Shield View */}
         {!isAuthenticated ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center relative z-10 max-w-md mx-auto py-16">
-            <div className="w-16 h-16 rounded-full bg-violet-500/10 border border-violet-500/30 flex items-center justify-center text-violet-400 mb-6 animate-pulse">
-              <LucideIcons.Lock className="w-8 h-8" />
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center relative z-10 max-w-sm mx-auto py-16">
+            <div className="relative mb-6">
+              <div className="absolute inset-0 bg-violet-600/20 rounded-full blur-xl animate-pulse" />
+              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-tr from-violet-600/20 to-purple-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400">
+                <LucideIcons.Lock className="w-7 h-7" />
+              </div>
             </div>
-            <h3 className="text-xl font-black uppercase tracking-tight mb-2">Yönetici Girişi</h3>
-            <p className="text-xs text-neutral-500 mb-6 leading-relaxed">
-              Bu alan sadece site yöneticisinin erişimine açıktır. Devam etmek için şifreyi giriniz.
+            
+            <h3 className="text-lg font-black uppercase tracking-tight mb-1.5">Yönetici Oturumu</h3>
+            <p className="text-[11px] text-neutral-500 mb-6 leading-relaxed">
+              Bu alan sadece site yöneticisinin erişimine açıktır. Lütfen geçerli erişim şifresini girin.
             </p>
 
             <form onSubmit={handleLogin} className="w-full flex flex-col gap-3">
-              <input
-                type="password"
-                placeholder="Yönetici Şifresi"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={`w-full py-3.5 px-4 rounded-xl border text-center text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all ${
-                  darkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-800'
-                }`}
-                autoFocus
-              />
-              {authError && <p className="text-[11px] text-red-500 font-bold">{authError}</p>}
+              <div className="relative">
+                <input
+                  type="password"
+                  placeholder="Yönetici Şifresi"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`w-full py-3.5 px-4 rounded-xl border text-center text-xs font-bold tracking-widest focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all ${
+                    darkMode 
+                      ? 'bg-neutral-950 border-neutral-850 text-white placeholder:text-neutral-600 placeholder:tracking-normal' 
+                      : 'bg-neutral-50 border-neutral-200 text-neutral-800 placeholder:text-neutral-400 placeholder:tracking-normal'
+                  }`}
+                  autoFocus
+                />
+              </div>
+              {authError && <p className="text-[10px] text-red-500 font-black tracking-wide uppercase">{authError}</p>}
               <button
                 type="submit"
-                className="w-full py-3.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-black rounded-xl uppercase tracking-wider shadow-lg shadow-violet-500/20 active:scale-[0.98] transition-all cursor-pointer mt-2"
+                className="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-black rounded-xl uppercase tracking-widest shadow-lg shadow-violet-600/10 active:scale-[0.98] transition-all cursor-pointer mt-1"
               >
-                GİRİŞ YAP
+                KİLİDİ AÇ
               </button>
             </form>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col relative z-10">
-            {/* Master Category Tabs */}
-            <div className={`grid grid-cols-3 border-b text-center shrink-0 ${darkMode ? 'border-neutral-850 bg-[#09090b]' : 'border-neutral-200 bg-neutral-50'}`}>
-              <button
-                type="button"
-                onClick={() => {
-                  setMasterTab('site');
-                  setActiveTab('settings');
-                }}
-                className={`py-4 px-2 text-[10px] sm:text-xs font-black tracking-wider flex items-center justify-center gap-2 border-b-2 transition-all cursor-pointer select-none leading-none ${
-                  masterTab === 'site'
-                    ? 'border-violet-500 text-violet-400 bg-violet-500/5'
-                    : 'border-transparent text-neutral-400 hover:text-white'
-                }`}
-              >
-                <LucideIcons.Sliders className="w-3.5 h-3.5" />
-                SİTE AYARLARI
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMasterTab('content');
-                  setActiveTab('categories');
-                }}
-                className={`py-4 px-2 text-[10px] sm:text-xs font-black tracking-wider flex items-center justify-center gap-2 border-b-2 transition-all cursor-pointer select-none leading-none ${
-                  masterTab === 'content'
-                    ? 'border-violet-500 text-violet-400 bg-violet-500/5'
-                    : 'border-transparent text-neutral-400 hover:text-white'
-                }`}
-              >
-                <LucideIcons.Layers className="w-3.5 h-3.5" />
-                İÇERİK YÖNETİMİ
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMasterTab('messages');
-                  setActiveTab('feedback');
-                }}
-                className={`py-4 px-2 text-[10px] sm:text-xs font-black tracking-wider flex items-center justify-center gap-2 border-b-2 transition-all cursor-pointer relative select-none leading-none ${
-                  masterTab === 'messages'
-                    ? 'border-violet-500 text-violet-400 bg-violet-500/5'
-                    : 'border-transparent text-neutral-400 hover:text-white'
-                }`}
-              >
-                <LucideIcons.MessageSquare className="w-3.5 h-3.5" />
-                MESAJLAR
-                {feedbackList.filter(f => !readFeedbackIds.includes(f.id)).length > 0 && (
-                  <span className="absolute top-2 right-2 sm:right-4 h-4.5 w-4.5 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]">
-                    {feedbackList.filter(f => !readFeedbackIds.includes(f.id)).length}
-                  </span>
-                )}
-              </button>
+          <div className="flex-1 flex flex-col relative z-10 overflow-hidden">
+            {/* Master Category Segmented Controller */}
+            <div className={`px-8 py-3.5 border-b flex flex-wrap gap-3 items-center justify-between shrink-0 ${
+              darkMode ? 'border-neutral-900 bg-[#07070a]' : 'border-neutral-200 bg-neutral-50'
+            }`}>
+              <div className="text-[10px] font-black uppercase text-neutral-500 tracking-widest font-mono">Modül Seçici</div>
+              
+              <div className="flex p-1 rounded-2xl bg-neutral-950/60 border border-neutral-900 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMasterTab('site');
+                    setActiveTab('settings');
+                  }}
+                  className={`py-1.5 px-4 rounded-xl text-[10.5px] font-black tracking-wider flex items-center gap-2 select-none leading-none transition-all cursor-pointer ${
+                    masterTab === 'site'
+                      ? 'bg-violet-600 text-white shadow-md shadow-violet-600/10'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  <LucideIcons.Sliders className="w-3.5 h-3.5" />
+                  SİTE AYARLARI
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMasterTab('content');
+                    setActiveTab('categories');
+                  }}
+                  className={`py-1.5 px-4 rounded-xl text-[10.5px] font-black tracking-wider flex items-center gap-2 select-none leading-none transition-all cursor-pointer ${
+                    masterTab === 'content'
+                      ? 'bg-violet-600 text-white shadow-md shadow-violet-600/10'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  <LucideIcons.Layers className="w-3.5 h-3.5" />
+                  İÇERİK YÖNETİMİ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMasterTab('messages');
+                    setActiveTab('feedback');
+                  }}
+                  className={`py-1.5 px-4 rounded-xl text-[10.5px] font-black tracking-wider flex items-center gap-2 select-none leading-none transition-all cursor-pointer relative ${
+                    masterTab === 'messages'
+                      ? 'bg-violet-600 text-white shadow-md shadow-violet-600/10'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  <LucideIcons.MessageSquare className="w-3.5 h-3.5" />
+                  GELEN KUTUSU
+                  {feedbackList.filter(f => !readFeedbackIds.includes(f.id)).length > 0 && (
+                    <span className="absolute -top-1.5 -right-1 h-4 w-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center animate-pulse">
+                      {feedbackList.filter(f => !readFeedbackIds.includes(f.id)).length}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Main Dashboard Layout */}
-            <div className="flex-1 flex flex-col md:flex-row min-h-[450px]">
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
               {/* Sidebar Navigation */}
-              <div className={`w-full md:w-56 p-4 flex flex-row md:flex-col gap-2 border-r overflow-x-auto shrink-0 ${
-                darkMode ? 'border-neutral-850 bg-[#09090b]' : 'border-neutral-200 bg-neutral-50/50'
+              <div className={`w-full md:w-60 p-5 flex flex-row md:flex-col gap-1.5 border-r overflow-x-auto shrink-0 ${
+                darkMode ? 'border-neutral-900 bg-[#07070a]' : 'border-neutral-200 bg-neutral-50/50'
               }`}>
                 {(() => {
                   const unreadCount = feedbackList.filter(f => !readFeedbackIds.includes(f.id)).length;
@@ -1187,6 +1382,8 @@ export default function AdminPanel({
                     { id: 'categories', label: 'KATEGORİLER', icon: 'Layout', master: 'content' },
                     { id: 'effects', label: 'EFEKT KÜTÜPHANESİ', icon: 'Layers', master: 'content' },
                     { id: 'plugins', label: 'GEREKLİ PLUGİNLER', icon: 'Cpu', master: 'content' },
+                    { id: 'blogs', label: 'BLOG MAKALELERİ', icon: 'BookOpen', master: 'content' },
+                    { id: 'faqs', label: 'SIKÇA SORULAN SORULAR', icon: 'HelpCircle', master: 'content' },
                     { id: 'feedback', label: 'GERİ BİLDİRİMLER', icon: 'MessageSquare', count: unreadCount, master: 'messages' },
                   ];
 
@@ -1200,20 +1397,20 @@ export default function AdminPanel({
                         type="button"
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as any)}
-                        className={`flex items-center justify-between gap-2.5 py-3 px-4 rounded-xl text-left text-xs font-black tracking-tight select-none cursor-pointer transition-all whitespace-nowrap md:w-full ${
+                        className={`flex items-center justify-between gap-3 py-3 px-4 rounded-xl text-left text-xs font-black tracking-wide select-none cursor-pointer transition-all duration-300 whitespace-nowrap md:w-full ${
                           isActive
-                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/10'
+                            ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-600/15 translate-x-1'
                             : darkMode
-                              ? 'hover:bg-neutral-850 text-neutral-400 hover:text-white'
-                              : 'hover:bg-neutral-200/60 text-neutral-600 hover:text-neutral-900'
+                              ? 'hover:bg-neutral-900/80 text-neutral-400 hover:text-white hover:translate-x-0.5'
+                              : 'hover:bg-neutral-200/60 text-neutral-600 hover:text-neutral-900 hover:translate-x-0.5'
                         }`}
                       >
-                        <span className="flex items-center gap-2.5">
-                          <IconComp className="w-4 h-4 shrink-0" />
+                        <span className="flex items-center gap-3">
+                          <IconComp className="w-4 h-4 shrink-0 opacity-80" />
                           {tab.label}
                         </span>
                         {tab.count !== undefined && tab.count > 0 && (
-                          <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]">
+                          <span className="bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md animate-pulse">
                             {tab.count}
                           </span>
                         )}
@@ -1222,28 +1419,29 @@ export default function AdminPanel({
                   });
                 })()}
 
-                <div className="hidden md:block mt-auto pt-4 border-t border-neutral-800/40">
+                <div className="hidden md:block mt-auto pt-4 border-t border-neutral-900">
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-2 py-2 px-4 rounded-lg text-left text-[11px] font-bold text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
-                >
-                  <LucideIcons.LogOut className="w-3.5 h-3.5" />
-                  GÜVENLİ ÇIKIŞ
-                </button>
+                    className="w-full flex items-center gap-2.5 py-2.5 px-4 rounded-xl text-left text-[11px] font-bold text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+                  >
+                    <LucideIcons.LogOut className="w-3.5 h-3.5" />
+                    OTURUMU KAPAT
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* Dashboard Workspace */}
-            <div className="flex-1 p-6 overflow-y-auto max-h-[500px]">
-              
-              {/* TAB 1: SITE GENERAL SETTINGS */}
-              {activeTab === 'settings' && (
-                <div className="flex flex-col gap-6 animate-fade-in">
-                  <div className="flex flex-col leading-tight border-b border-neutral-800/40 pb-3">
-                    <h3 className="text-base font-black uppercase tracking-tight">Genel Site & Profil Düzenlemeleri</h3>
-                    <p className="text-[11px] text-neutral-500 mt-0.5">Sitedeki ana metinleri, başlıkları, yaratıcı profil detaylarını ve sosyal medya hesaplarını tek bir yerden yönetin.</p>
-                  </div>
+              {/* Dashboard Workspace */}
+              <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
+                
+                {/* TAB 1: SITE GENERAL SETTINGS */}
+                {activeTab === 'settings' && (
+                  <div className="flex flex-col gap-6 animate-fade-in">
+                    <div className="flex flex-col leading-tight border-b border-neutral-900 pb-3">
+                      <h3 className="text-base font-black uppercase tracking-tight">Genel Site & Profil Düzenlemeleri</h3>
+                      <p className="text-[11px] text-neutral-500 mt-0.5">Sitedeki ana metinleri, başlıkları, yaratıcı profil detaylarını ve sosyal medya hesaplarını tek bir yerden yönetin.</p>
+                    </div>
+
 
                   {/* FIREBASE CONFIGURATION & SEEDING BOX */}
                   {isFirebaseConfigured() ? (
@@ -2506,6 +2704,333 @@ export default function AdminPanel({
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB: BLOG MAKALELERİ */}
+              {activeTab === 'blogs' && (
+                <div className="flex flex-col gap-6 animate-fade-in text-left">
+                  <div className="flex flex-col leading-tight border-b border-neutral-800/40 pb-3">
+                    <h3 className="text-base font-black uppercase tracking-tight">Blog Makale Yönetimi</h3>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">Sitedeki bilgilendirici ve eğitsel blog yazılarını ekleyin, düzenleyin veya silin.</p>
+                  </div>
+
+                  {/* Form */}
+                  <div className={`p-5 rounded-2xl border flex flex-col gap-4 ${
+                    darkMode ? 'bg-[#101012] border-neutral-800/80' : 'bg-neutral-50 border-neutral-200'
+                  }`}>
+                    <span className="text-[10px] font-black uppercase text-violet-400 font-mono">
+                      {editingBlogId ? 'MAKALE DÜZENLEME' : 'YENİ MAKALE OLUŞTURMA'}
+                    </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Title */}
+                      <div className="flex flex-col gap-1.5 sm:col-span-2">
+                        <label className="text-[10px] font-bold text-neutral-400">Makale Başlığı</label>
+                        <input
+                          type="text"
+                          value={blogTitle}
+                          onChange={(e) => setBlogTitle(e.target.value)}
+                          placeholder="Örn: After Effects'te Doğru Render Ayarları (CC)"
+                          className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Image URL */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold text-neutral-400">Kapak Resmi URL (Unsplash veya Direkt Link)</label>
+                        <input
+                          type="text"
+                          value={blogImageUrl}
+                          onChange={(e) => setBlogImageUrl(e.target.value)}
+                          placeholder="https://images.unsplash.com/..."
+                          className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Author */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold text-neutral-400">Yazar İsmi</label>
+                        <input
+                          type="text"
+                          value={blogAuthor}
+                          onChange={(e) => setBlogAuthor(e.target.value)}
+                          placeholder="Pars Mazi"
+                          className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Summary */}
+                      <div className="flex flex-col gap-1.5 sm:col-span-2">
+                        <label className="text-[10px] font-bold text-neutral-400">Özet (Kısa Açıklama - Kartta Görünecek)</label>
+                        <textarea
+                          rows={2}
+                          value={blogSummary}
+                          onChange={(e) => setBlogSummary(e.target.value)}
+                          placeholder="Makalenin kısa, dikkat çekici özeti..."
+                          className={`py-2 px-3 rounded-xl border text-xs resize-none focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex flex-col gap-1.5 sm:col-span-2">
+                        <label className="text-[10px] font-bold text-neutral-400">Tam Makale İçeriği (Yeni satırlar için Enter kullanabilirsiniz)</label>
+                        <textarea
+                          rows={8}
+                          value={blogContent}
+                          onChange={(e) => setBlogContent(e.target.value)}
+                          placeholder="Makalenin detaylı içeriğini buraya yazın..."
+                          className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 mt-2">
+                      {editingBlogId && (
+                        <button
+                          onClick={() => {
+                            setEditingBlogId(null);
+                            setBlogTitle('');
+                            setBlogSummary('');
+                            setBlogContent('');
+                            setBlogImageUrl('');
+                            setBlogAuthor('Pars Mazi');
+                          }}
+                          className={`py-2 px-4 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
+                            darkMode ? 'bg-neutral-900 hover:bg-neutral-850 text-neutral-400 hover:text-white' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-600'
+                          }`}
+                        >
+                          İPTAL
+                        </button>
+                      )}
+                      <button
+                        onClick={handleSaveBlog}
+                        className="py-2 px-5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-black rounded-xl uppercase tracking-wider cursor-pointer transition-transform active:scale-95"
+                      >
+                        {editingBlogId ? 'MAKALEYİ GÜNCELLE' : 'YENİ MAKALE EKLE'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* List */}
+                  <div className="flex flex-col gap-3">
+                    <span className="text-[10px] font-black uppercase text-neutral-500 font-mono">YAYINLANAN MAKALELER ({blogs.length})</span>
+                    <div className="flex flex-col gap-2 max-h-[350px] overflow-y-auto pr-1">
+                      {blogs.length === 0 ? (
+                        <div className="text-center py-6 text-neutral-500 text-xs">Kayıtlı blog yazısı bulunmuyor.</div>
+                      ) : (
+                        blogs.map((post) => (
+                          <div
+                            key={post.id}
+                            className={`p-4 rounded-xl border flex items-center justify-between gap-4 ${
+                              darkMode ? 'bg-[#0f0f11] border-neutral-850' : 'bg-white border-neutral-200 shadow-sm'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              {post.imageUrl && (
+                                <img
+                                  src={post.imageUrl}
+                                  alt=""
+                                  referrerPolicy="no-referrer"
+                                  className="w-12 h-12 rounded-lg object-cover bg-neutral-900 shrink-0 border border-neutral-800"
+                                />
+                              )}
+                              <div className="flex flex-col min-w-0">
+                                <span className={`text-xs font-extrabold truncate ${darkMode ? 'text-white' : 'text-neutral-800'}`}>
+                                  {post.title}
+                                </span>
+                                <span className="text-[9.5px] font-mono text-neutral-500 mt-0.5 truncate">
+                                  YAZAR: {post.author} • TARİH: {post.date}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                onClick={() => {
+                                  setEditingBlogId(post.id);
+                                  setBlogTitle(post.title);
+                                  setBlogSummary(post.summary);
+                                  setBlogContent(post.content);
+                                  setBlogImageUrl(post.imageUrl || '');
+                                  setBlogAuthor(post.author);
+                                }}
+                                className={`p-2 rounded-lg border transition-colors cursor-pointer ${
+                                  darkMode ? 'border-neutral-800 hover:bg-neutral-850 text-neutral-400 hover:text-white' : 'border-neutral-200 hover:bg-neutral-100 text-neutral-600'
+                                }`}
+                                title="Düzenle"
+                              >
+                                <LucideIcons.Edit2 className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                onClick={() => handleDeleteBlog(post.id)}
+                                className="p-2 rounded-lg border border-red-500/10 hover:bg-red-500/10 text-neutral-500 hover:text-red-500 transition-colors cursor-pointer"
+                                title="Sil"
+                              >
+                                <LucideIcons.Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB: SIKÇA SORULAN SORULAR */}
+              {activeTab === 'faqs' && (
+                <div className="flex flex-col gap-6 animate-fade-in text-left">
+                  <div className="flex flex-col leading-tight border-b border-neutral-800/40 pb-3">
+                    <h3 className="text-base font-black uppercase tracking-tight">Sıkça Sorulan Sorular (FAQ) Yönetimi</h3>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">Sitedeki yardım menüsünde görüntülenecek soru ve cevapları yönetin.</p>
+                  </div>
+
+                  {/* Form */}
+                  <div className={`p-5 rounded-2xl border flex flex-col gap-4 ${
+                    darkMode ? 'bg-[#101012] border-neutral-800/80' : 'bg-neutral-50 border-neutral-200'
+                  }`}>
+                    <span className="text-[10px] font-black uppercase text-violet-400 font-mono">
+                      {editingFaqId ? 'SORU DÜZENLEME' : 'YENİ SORU EKLEME'}
+                    </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Question */}
+                      <div className="flex flex-col gap-1.5 sm:col-span-2">
+                        <label className="text-[10px] font-bold text-neutral-400">Soru Metni</label>
+                        <input
+                          type="text"
+                          value={faqQuestion}
+                          onChange={(e) => setFaqQuestion(e.target.value)}
+                          placeholder="Örn: Preset'leri After Effects'e nasıl kurarım?"
+                          className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Order */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold text-neutral-400">Sıralama Önceliği (Sayı)</label>
+                        <input
+                          type="number"
+                          value={faqOrder}
+                          onChange={(e) => setFaqOrder(Number(e.target.value))}
+                          placeholder="1"
+                          className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Answer */}
+                      <div className="flex flex-col gap-1.5 sm:col-span-2">
+                        <label className="text-[10px] font-bold text-neutral-400">Detaylı Cevap Metni</label>
+                        <textarea
+                          rows={4}
+                          value={faqAnswer}
+                          onChange={(e) => setFaqAnswer(e.target.value)}
+                          placeholder="Kullanıcıya yardımcı olacak açıklamayı yazın..."
+                          className={`py-2 px-3 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                            darkMode ? 'bg-neutral-950 border-neutral-800 text-white' : 'bg-white border-neutral-200 text-neutral-800'
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 mt-2">
+                      {editingFaqId && (
+                        <button
+                          onClick={() => {
+                            setEditingFaqId(null);
+                            setFaqQuestion('');
+                            setFaqAnswer('');
+                            setFaqOrder(1);
+                          }}
+                          className={`py-2 px-4 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
+                            darkMode ? 'bg-neutral-900 hover:bg-neutral-850 text-neutral-400 hover:text-white' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-600'
+                          }`}
+                        >
+                          İPTAL
+                        </button>
+                      )}
+                      <button
+                        onClick={handleSaveFaq}
+                        className="py-2 px-5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-black rounded-xl uppercase tracking-wider cursor-pointer transition-transform active:scale-95"
+                      >
+                        {editingFaqId ? 'SORUYU GÜNCELLE' : 'YENİ SORU EKLE'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* List */}
+                  <div className="flex flex-col gap-3">
+                    <span className="text-[10px] font-black uppercase text-neutral-500 font-mono">KAYITLI SORULAR VE CEVAPLAR ({faqs.length})</span>
+                    <div className="flex flex-col gap-2 max-h-[350px] overflow-y-auto pr-1">
+                      {faqs.length === 0 ? (
+                        <div className="text-center py-6 text-neutral-500 text-xs">Kayıtlı soru bulunmuyor.</div>
+                      ) : (
+                        faqs.map((faq) => (
+                          <div
+                            key={faq.id}
+                            className={`p-4 rounded-xl border flex items-center justify-between gap-4 ${
+                              darkMode ? 'bg-[#0f0f11] border-neutral-850' : 'bg-white border-neutral-200 shadow-sm'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center font-mono text-xs font-black shrink-0">
+                                S{faq.order}
+                              </div>
+                              <div className="flex flex-col min-w-0 text-left">
+                                <span className={`text-xs font-extrabold truncate ${darkMode ? 'text-white' : 'text-neutral-800'}`}>
+                                  {faq.question}
+                                </span>
+                                <span className="text-[10px] text-neutral-500 mt-0.5 truncate leading-relaxed">
+                                  {faq.answer}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                onClick={() => {
+                                  setEditingFaqId(faq.id);
+                                  setFaqQuestion(faq.question);
+                                  setFaqAnswer(faq.answer);
+                                  setFaqOrder(faq.order);
+                                }}
+                                className={`p-2 rounded-lg border transition-colors cursor-pointer ${
+                                  darkMode ? 'border-neutral-800 hover:bg-neutral-850 text-neutral-400 hover:text-white' : 'border-neutral-200 hover:bg-neutral-100 text-neutral-600'
+                                }`}
+                                title="Düzenle"
+                              >
+                                <LucideIcons.Edit2 className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                onClick={() => handleDeleteFaq(faq.id)}
+                                className="p-2 rounded-lg border border-red-500/10 hover:bg-red-500/10 text-neutral-500 hover:text-red-500 transition-colors cursor-pointer"
+                                title="Sil"
+                              >
+                                <LucideIcons.Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>

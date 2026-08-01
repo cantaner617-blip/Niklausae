@@ -52,3 +52,21 @@ export interface FeedbackSubmission {
   contact?: string;
   createdAt: string;
 }
+
+export interface FaqItem {
+  id: string;
+  question: string;
+  answer: string;
+  order: number;
+}
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  content: string;
+  summary: string;
+  imageUrl?: string;
+  date: string;
+  author: string;
+}
+

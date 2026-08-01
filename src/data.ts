@@ -1,4 +1,4 @@
-import { Category, EffectItem, RequiredPlugin } from './types';
+import { Category, EffectItem, RequiredPlugin, FaqItem, BlogPost } from './types';
 
 export const CATEGORIES: Category[] = [
   {
@@ -977,5 +977,53 @@ export const PORTFOLIO_VIDEOS = [
     duration: '1:00',
     thumbnail: 'https://picsum.photos/seed/typography/600/400',
     videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+  }
+];
+
+export const DEFAULT_FAQS: FaqItem[] = [
+  {
+    id: 'faq-1',
+    question: 'Hazır ayarları (preset\'leri) After Effects\'e nasıl yüklerim?',
+    answer: 'İndirdiğiniz .ffx uzantılı dosyaları bilgisayarınızda "Belgeler/Adobe/After Effects [Sürüm]/User Presets" klasörüne kopyalayın. Ardından After Effects içerisindeki "Effects & Presets" panelini yenileyerek efektlerinize anında erişebilirsiniz.',
+    order: 1
+  },
+  {
+    id: 'faq-2',
+    question: 'Eklentilerin (Plugin\'lerin) kurulması zorunlu mu?',
+    answer: 'Evet, efekt detaylarında listelenen eklentiler (Sapphire, Continuum, Magic Bullet Looks, Twixtor, Deep Glow vb.) bilgisayarınızda kurulu olmalıdır. Aksi takdirde "Missing Plugin" uyarısı alırsınız ve efektler çalışmaz.',
+    order: 2
+  },
+  {
+    id: 'faq-3',
+    question: 'Renk ayarlarını (CC) Premiere Pro\'da da kullanabilir miyim?',
+    answer: 'Paylaşılan renk ayarlarının (CC) çoğu After Effects (.ffx) biçimindedir. Premiere Pro için olan hazır ayarları .prpreset veya .look/LUT biçiminde olan özel paketlerimizde bulabilir, Premiere içerisindeki Lumetri Color sekmesinden içe aktarabilirsiniz.',
+    order: 3
+  },
+  {
+    id: 'faq-4',
+    question: 'Twixtor yavaşlatma efekti neden titreme veya dalgalanma yapıyor?',
+    answer: 'Twixtor\'un kare birleştirme teknolojisi çok hızlı arka plan geçişlerinde veya karmaşık detaylarda dalgalanma yapabilir. Bunu önlemek için "Contrast/Edge Enhance" ayarını etkinleştirin ve videonun FPS değerini (Input Fields) After Effects kompozisyonunuzla birebir eşitleyin.',
+    order: 4
+  }
+];
+
+export const DEFAULT_BLOG_POSTS: BlogPost[] = [
+  {
+    id: 'blog-1',
+    title: 'After Effects\'te Kurgu Hızlandırma ve Optimizasyon Yöntemleri',
+    summary: 'Projelerinizde ağır render sürelerini azaltmak, önizlemeleri pürüzsüzleştirmek ve After Effects performansını katlamak için uygulayabileceğiniz en iyi optimizasyon adımları.',
+    content: 'After Effects üzerinde çalışırken kurgu hızını artırmanın en kolay yolu önizleme çözünürlüğünü (Preview Resolution) "Half" veya "Quarter" seviyesine düşürmektir. Ayrıca RAM önbelleğini (Edit > Purge > All Memory & Disk Cache) düzenli olarak temizlemek, disk önbelleği olarak mutlaka yüksek hızlı bir NVMe SSD kullanmak ve gereksiz katmanları pre-compose yaparak gruplamak çalışma performansınızı muazzam derecede artıracaktır. Ek olarak, kullanılmayan efektleri kapatmak ve karmaşık ifadeleri (expressions) azaltmak da render sürenizi yarı yarıya kısaltabilir.',
+    imageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
+    date: '01.08.2026',
+    author: 'Pars Mazi'
+  },
+  {
+    id: 'blog-2',
+    title: 'Sıkça Tercih Edilen Shake (Sallantı) Efektleri ve Doğru Graf Eğrileri',
+    summary: 'Videolarınıza sinematik ve dinamik bir hava katmak için After Effects\'te en çok kullanılan sallantı efektlerinin en pürüzsüz ayarları ve graf sırları.',
+    content: 'Doğru bir shake (sallantı) efekti, müzik vuruşlarını (beats) belirginleştirmek için vazgeçilmezdir. After Effects\'te en popüler olan dikey pürüzsüz sallantı (smooth Y-shake) veya rotasyonel sallantı (rotational shake), kurgunuza profesyonel bir dinamizm katacaktır. Bunları uygularken "Motion Blur" (Hareket Bulanıklığı) seçeneğini aktif etmeyi kesinlikle unutmayın. Ayrıca Sapphire S_Shake içerisindeki genlik (Amplitude) ve sıklık (Frequency) değerlerini zaman çizelgesinde (timeline) graf editörü yardımıyla üstel bir sönümlemeyle (Exponential Decay) ayarlamak, sallantının küt diye durmasını önler ve çok daha yumuşak geçişler sağlar.',
+    imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80',
+    date: '28.07.2026',
+    author: 'Pars Mazi'
   }
 ];
